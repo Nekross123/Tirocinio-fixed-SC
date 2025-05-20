@@ -274,15 +274,36 @@ def _convert_idl_for_anchorpy(program_name):
         "errors": idl_31.get("errors", [])
     }
 
+    found_defined_types = set()
+    
+    def fix_defined_types(obj):
+        if isinstance(obj, dict):
+            if "type" in obj and isinstance(obj["type"], dict):
+                if "defined" in obj["type"]:
+                    defined_type = None
+                    if isinstance(obj["type"]["defined"], str):
+                        defined_type = obj["type"]["defined"]
+                    elif isinstance(obj["type"]["defined"], dict):
+                        defined_type = obj["type"]["defined"]["name"]
+                    
+                    if defined_type:
+                        found_defined_types.add(defined_type)
+                        obj["type"] = { "defined": defined_type }
+   
+            for k, v in obj.items():
+                obj[k] = fix_defined_types(v)
+        elif isinstance(obj, list):
+            obj = [fix_defined_types(i) for i in obj]
+        return obj
+
     # Convert instructions
     for instruction in idl_31["instructions"]:
         converted_instruction = {
             "name": instruction["name"],
             "accounts": [],
-            "args": instruction.get("args", [])
+            "args": fix_defined_types(instruction.get("args", []))
         }
 
-        # Convert instruction accounts
         for account in instruction["accounts"]:
             converted_account = {
                 "name": _snake_to_camel(account["name"]),
@@ -298,24 +319,42 @@ def _convert_idl_for_anchorpy(program_name):
 
     for account in idl_31.get("accounts", []):
         account_name = account["name"]
+        account_type = type_definitions.get(account_name, {})
+        fixed_type = fix_defined_types(account_type)
 
-        converted_account = {
-            "name": account_name,
-            "type": type_definitions.get(account_name, {})
-        }
-
-        # If it is a struct, we rename pubkey to publicKey
-        if "fields" in converted_account["type"]:
-            for field in converted_account["type"]["fields"]:
+        if "fields" in fixed_type:
+            for field in fixed_type["fields"]:
                 if field["type"] == "pubkey":
                     field["type"] = "publicKey"
 
-        idl_29["accounts"].append(converted_account)
+        idl_29["accounts"].append({
+            "name": account_name,
+            "type": fixed_type
+        })
 
+    # Add types (with dummy variants if needed)
+    idl_29["types"] = idl_31.get("types", [])
+    existing_type_names = {t["name"] for t in idl_29["types"]}
+    for type_name in found_defined_types:
+        if type_name not in existing_type_names:
+            idl_29["types"].append({
+                "name": type_name,
+                "type": {
+                    "kind": "enum",
+                    "variants": [
+                        { "name": "Variant1" },
+                        { "name": "Variant2" }
+                    ]
+                }
+            })
+
+    # Save corrected file
     with open(idl_file_path, 'w') as file:
-        file.write(json.dumps(idl_29))
+        file.write(json.dumps(idl_29, indent=2))
 
     return True
+
+
 
 def _snake_to_camel(snake_str):
     return re.sub(r'_([a-z])', lambda match: match.group(1).upper(), snake_str)
