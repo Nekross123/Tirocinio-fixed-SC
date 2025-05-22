@@ -278,23 +278,26 @@ def _convert_idl_for_anchorpy(program_name):
     
     def fix_defined_types(obj):
         if isinstance(obj, dict):
-            if "type" in obj and isinstance(obj["type"], dict):
-                if "defined" in obj["type"]:
-                    defined_type = None
-                    if isinstance(obj["type"]["defined"], str):
-                        defined_type = obj["type"]["defined"]
-                    elif isinstance(obj["type"]["defined"], dict):
-                        defined_type = obj["type"]["defined"]["name"]
-                    
-                    if defined_type:
-                        found_defined_types.add(defined_type)
-                        obj["type"] = { "defined": defined_type }
-   
             for k, v in obj.items():
-                obj[k] = fix_defined_types(v)
+                if k == "type":
+                    if v == "pubkey":
+                        obj[k] = "publicKey"
+                    elif isinstance(v, dict) and "defined" in v:
+                        defined_type = v["defined"]
+                        if isinstance(defined_type, dict):
+                            defined_type = defined_type.get("name")
+                        if defined_type:
+                            found_defined_types.add(defined_type)
+                            obj[k] = {"defined": defined_type}
+                    else:
+                        obj[k] = fix_defined_types(v)
+                else:
+                    obj[k] = fix_defined_types(v)
         elif isinstance(obj, list):
             obj = [fix_defined_types(i) for i in obj]
         return obj
+
+
 
     # Convert instructions
     for instruction in idl_31["instructions"]:
@@ -323,17 +326,23 @@ def _convert_idl_for_anchorpy(program_name):
         fixed_type = fix_defined_types(account_type)
 
         if "fields" in fixed_type:
-            for field in fixed_type["fields"]:
-                if field["type"] == "pubkey":
-                    field["type"] = "publicKey"
+            fixed_type["fields"] = fix_defined_types(fixed_type["fields"])
 
         idl_29["accounts"].append({
             "name": account_name,
             "type": fixed_type
         })
 
+
     # Add types (with dummy variants if needed)
-    idl_29["types"] = idl_31.get("types", [])
+    idl_29["types"] = []
+    for t in idl_31.get("types", []):
+        fixed_type = fix_defined_types(t["type"])
+        idl_29["types"].append({
+            "name": t["name"],
+            "type": fixed_type
+        })
+
     existing_type_names = {t["name"] for t in idl_29["types"]}
     for type_name in found_defined_types:
         if type_name not in existing_type_names:
