@@ -107,39 +107,193 @@ def _read_rs_files(programs_path):
 
         return file_names, anchor_programs
 
+# This function analyzes the Rust program code and automatically detects which external 
+# dependencies are needed based on the use statements and imports.
+def _detect_dependencies_from_code(program_code):
+    """Detect dependencies needed based on imports in the Rust code"""
+    dependencies = {}
+    
+    # Check for pyth_sdk_solana
+    if 'use pyth_sdk_solana' in program_code or 'pyth_sdk_solana::' in program_code:
+        dependencies['pyth-sdk-solana'] = "0.10"
+    
+    # Check for switchboard
+    if 'use switchboard_' in program_code or 'switchboard_' in program_code:
+        dependencies['switchboard-solana'] = "0.29"
+    
+    # Check for spl-token (but don't add it directly if anchor-spl is present)
+    if 'use spl_token' in program_code or 'spl_token::' in program_code:
+        dependencies['spl-token'] = "7.0"
+    
+    # Check for spl-associated-token-account
+    if 'use spl_associated_token_account' in program_code or 'spl_associated_token_account::' in program_code:
+        dependencies['spl-associated-token-account'] = "4.0"
+    
+    # Check for mpl-token-metadata
+    if 'use mpl_token_metadata' in program_code or 'mpl_token_metadata::' in program_code:
+        dependencies['mpl-token-metadata'] = "4.1"
+    
+    return dependencies
 
-#this function adds the feature init-if-needed in the Cargo.toml file 
-def addInitIfNeeded(cargo_path):
 
+def _check_for_anchor_spl_usage(program_code):
+    """Check if the program uses anchor-spl features"""
+    anchor_spl_indicators = [
+        'use anchor_spl',
+        'anchor_spl::',
+        'Token,',
+        'TokenAccount,',
+        'AssociatedToken',
+        'SetAuthority',
+        'Transfer',
+        'token::',
+        'associated_token::'
+    ]
+    
+    return any(indicator in program_code for indicator in anchor_spl_indicators)
+
+
+#this function adds the feature init-if-needed in the Cargo.toml file and other dependencies
+# Updated  function:
+# Renamed to be more descriptive of its expanded purpose
+# Now takes the program code as a parameter
+# Automatically adds detected dependencies to Cargo.toml
+# Currently detects: pyth-sdk-solana, switchboard-solana,
+# spl-token, spl-associated-token-account, and mpl-token-metadata
+def addInitIfNeeded(cargo_path, program_code):
     try:
-            # We modify the files , only if it exists
-            if os.path.exists(cargo_path):
-                cargo_config = toml.load(cargo_path)
-                
-                # Modifica la dipendenza anchor-lang per includere la feature init-if-needed
-                if 'dependencies' in cargo_config and 'anchor-lang' in cargo_config['dependencies']:
-                    if isinstance(cargo_config['dependencies']['anchor-lang'], dict):
-                        if 'features' in cargo_config['dependencies']['anchor-lang']:
-                            if 'init-if-needed' not in cargo_config['dependencies']['anchor-lang']['features']:
-                                cargo_config['dependencies']['anchor-lang']['features'].append('init-if-needed')
-                        else:
-                            cargo_config['dependencies']['anchor-lang']['features'] = ['init-if-needed']
+        # We modify the files, only if it exists
+        if os.path.exists(cargo_path):
+            cargo_config = toml.load(cargo_path)
+            
+            # Ensure dependencies section exists
+            if 'dependencies' not in cargo_config:
+                cargo_config['dependencies'] = {}
+            
+            # Check if anchor-spl is needed
+            needs_anchor_spl = _check_for_anchor_spl_usage(program_code)
+            
+            # Handle anchor-lang dependency - check if it exists first
+            if 'anchor-lang' in cargo_config['dependencies']:
+                if isinstance(cargo_config['dependencies']['anchor-lang'], dict):
+                    # Already a dict with version and features
+                    if 'features' in cargo_config['dependencies']['anchor-lang']:
+                        if 'init-if-needed' not in cargo_config['dependencies']['anchor-lang']['features']:
+                            cargo_config['dependencies']['anchor-lang']['features'].append('init-if-needed')
                     else:
-                        version = cargo_config['dependencies']['anchor-lang']
-                        cargo_config['dependencies']['anchor-lang'] = {
-                            'version': version,
-                            'features': ['init-if-needed']
-                        }
-                
-                # Saves changes in the Cargo.toml file 
-                with open(cargo_path, 'w') as f:
-                    toml.dump(cargo_config, f)
-                
-                print(f"Cargo.toml creato/modificato con feature init-if-needed")
+                        cargo_config['dependencies']['anchor-lang']['features'] = ['init-if-needed']
+                else:
+                    # It's just a version string, convert to dict
+                    version = cargo_config['dependencies']['anchor-lang']
+                    cargo_config['dependencies']['anchor-lang'] = {
+                        'version': version,
+                        'features': ['init-if-needed']
+                    }
             else:
-                print(f"Errore: Cargo.toml non trovato in {cargo_path}")
+                # anchor-lang doesn't exist, add it
+                cargo_config['dependencies']['anchor-lang'] = {
+                    'version': "0.31.1",
+                    'features': ['init-if-needed']
+                }
+                print("Added anchor-lang dependency with init-if-needed feature")
+            
+            # Add anchor-spl if needed and not already present
+            if needs_anchor_spl:
+                if 'anchor-spl' not in cargo_config['dependencies']:
+                    cargo_config['dependencies']['anchor-spl'] = "0.31.1"
+                    print(f"Added dependency: anchor-spl = \"0.31.1\"")
+                
+                # Ensure features section exists
+                if 'features' not in cargo_config:
+                    cargo_config['features'] = {}
+                
+                # Handle idl-build feature
+                if 'idl-build' in cargo_config['features']:
+                    # Ensure it's a list
+                    if not isinstance(cargo_config['features']['idl-build'], list):
+                        cargo_config['features']['idl-build'] = []
+                    
+                    # Add anchor-lang/idl-build if not present
+                    if 'anchor-lang/idl-build' not in cargo_config['features']['idl-build']:
+                        cargo_config['features']['idl-build'].append('anchor-lang/idl-build')
+                    
+                    # Add anchor-spl/idl-build if not present
+                    if 'anchor-spl/idl-build' not in cargo_config['features']['idl-build']:
+                        cargo_config['features']['idl-build'].append('anchor-spl/idl-build')
+                else:
+                    # Create idl-build feature with both dependencies
+                    cargo_config['features']['idl-build'] = ['anchor-lang/idl-build', 'anchor-spl/idl-build']
+                    print("Added idl-build feature with anchor-spl support")
+            else:
+                # Even if anchor-spl is not needed, ensure idl-build has anchor-lang
+                if 'features' not in cargo_config:
+                    cargo_config['features'] = {}
+                
+                if 'idl-build' in cargo_config['features']:
+                    if not isinstance(cargo_config['features']['idl-build'], list):
+                        cargo_config['features']['idl-build'] = []
+                    if 'anchor-lang/idl-build' not in cargo_config['features']['idl-build']:
+                        cargo_config['features']['idl-build'].append('anchor-lang/idl-build')
+                else:
+                    cargo_config['features']['idl-build'] = ['anchor-lang/idl-build']
+            
+            # Detect and add other dependencies based on the program code
+            detected_deps = _detect_dependencies_from_code(program_code)
+            for dep_name, dep_version in detected_deps.items():
+                # Always add detected dependencies, including spl-token even with anchor-spl
+                if dep_name not in cargo_config['dependencies']:
+                    cargo_config['dependencies'][dep_name] = dep_version
+                    print(f"Added dependency: {dep_name} = \"{dep_version}\"")
+            
+            # Force add spl-token if any token-related usage is detected (common requirement)
+            token_indicators = [
+                'Token', 'TokenAccount', 'Mint', 'transfer', 'mint_to', 
+                'burn', 'freeze_account', 'thaw_account', 'set_authority',
+                'spl_token::', 'token::', 'TokenInstruction'
+            ]
+            
+            if any(indicator in program_code for indicator in token_indicators):
+                if 'spl-token' not in cargo_config['dependencies']:
+                    cargo_config['dependencies']['spl-token'] = "7.0"
+                    print(f"Added dependency: spl-token = \"7.0\" (detected token usage)")
+            
+            # Ensure all required features are present
+            required_features = ['default', 'cpi', 'no-entrypoint', 'no-idl', 'no-log-ix-name']
+            for feature in required_features:
+                if feature not in cargo_config['features']:
+                    if feature == 'default':
+                        cargo_config['features'][feature] = []
+                    elif feature == 'cpi':
+                        cargo_config['features'][feature] = ['no-entrypoint']
+                    else:
+                        cargo_config['features'][feature] = []
+            
+            # Ensure lib section exists with correct crate-type and name
+            if 'lib' not in cargo_config:
+                cargo_config['lib'] = {}
+            
+            if 'crate-type' not in cargo_config['lib']:
+                cargo_config['lib']['crate-type'] = ['cdylib', 'lib']
+            
+            if 'name' not in cargo_config['lib']:
+                # Use the package name from the config
+                package_name = cargo_config.get('package', {}).get('name', 'anchor_environment')
+                cargo_config['lib']['name'] = package_name
+            
+            # Save changes in the Cargo.toml file 
+            with open(cargo_path, 'w') as f:
+                toml.dump(cargo_config, f)
+            
+            print(f"Cargo.toml updated successfully with required dependencies and features")
+        else:
+            print(f"Error: Cargo.toml not found in {cargo_path}")
+            return False
+            
     except Exception as e:
-            print(f"Errore durante la modifica di Cargo.toml: {e}")
+        print(f"Error during Cargo.toml modification: {e}")
+        return False
+    
+    return True
 
 
 def _compile_program(program_name, operating_system, program):
@@ -148,9 +302,9 @@ def _compile_program(program_name, operating_system, program):
     if not done:
         return False
     else:
-        # After initialization, create/modify the Cargo.toml file with the desired feature
+        # After initialization, create/modify the Cargo.toml file with the desired feature and dependencies
         cargo_toml_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/programs/anchor_environment/Cargo.toml"
-        addInitIfNeeded(cargo_toml_path)
+        addInitIfNeeded(cargo_toml_path, program)
         
         
     
