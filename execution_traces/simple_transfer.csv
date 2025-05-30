@@ -1,0 +1,2 @@
+1;simple_transfer;deposit;P:4aiBd9iPf3L3Y2faVGko7byDBkLUqV28LGiJte4tZRwD;W:wallet1.json;W:wallet3.json;1000000;W:wallet1.json;TRUE
+2;simple_transfer;withdraw;W:wallet3.json;W:wallet1.json;P:4aiBd9iPf3L3Y2faVGko7byDBkLUqV28LGiJte4tZRwD;W:wallet1.json;1000;W:wallet1.json;TRUE
