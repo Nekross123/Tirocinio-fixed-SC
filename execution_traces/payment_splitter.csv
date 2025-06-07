@@ -1,0 +1,2 @@
+1;payment_splitter;initialize;W:wallet3.json;P:96xbuG7WoUqibQLsq2Ce78XxqiFeLwDQdT6jBF9CNywJ;R:wallet3.json;R:wallet1.json;1000;500 500;W:wallet3.json;true
+2;payment_splitter;release;W:wallet3.json;W:wallet3.json;P:96xbuG7WoUqibQLsq2Ce78XxqiFeLwDQdT6jBF9CNywJ;W:wallet3.json;true
