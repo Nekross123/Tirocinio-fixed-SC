@@ -1,0 +1,2 @@
+1;vault;initialize;W:wallet2.json;W:wallet1.json;P:5VKiNHpo5RjyGYHfaWtHDC8ixV5RtSMe2v2aTHYbGdMB;10;100000;W:wallet2.json;true
+2;vault;withdraw;W:wallet2.json;W:wallet3.json;P:5VKiNHpo5RjyGYHfaWtHDC8ixV5RtSMe2v2aTHYbGdMB;1000;W:wallet2.json;true
