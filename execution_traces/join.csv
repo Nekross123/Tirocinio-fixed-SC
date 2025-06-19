@@ -1,0 +1,3 @@
+1;bet;join;W:id.json;W:wallet1.json;W:id.json;P:Dst8GmadpeuJPxpqEQ7koE32J8XA6mr1oT2nxHNFahLQ;10;100;id.json;TRUE;
+2;bet;timeout;W:id.json;W:wallet1.json;P:EyQnLfjykJL4o46SrfHEJ2X69tV6Ki5CDwqGwTjs6aHA;id.json;TRUE
+3;bet;win;W:id.json;W:id.json;P:EyQnLfjykJL4o46SrfHEJ2X69tV6Ki5CDwqGwTjs6aHA;W:id.json;W:wallet1.json;id.json;TRUE;
