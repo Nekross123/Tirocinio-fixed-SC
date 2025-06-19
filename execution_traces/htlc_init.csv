@@ -1,0 +1,3 @@
+1;htlc;initialize;W:wallet3.json;W:id.json;P:DH3FQkJQVgBYZ7mJKXGDTxhpeEJc6Q3ZaMBSwaHFKf6f;143 182 244 108 218 96 178 155 52 168 84 157 26 231 22 177 49 62 73 147 176 236 47 183 180 30 44 247 239 34 75 169;10;100;W:wallet3.json;TRUE;
+2;htlc;reveal;W:wallet3.json;W:id.json;P:DH3FQkJQVgBYZ7mJKXGDTxhpeEJc6Q3ZaMBSwaHFKf6f;ciao;W:wallet3.json;TRUE;
+3;htlc;timeout;W:id.json;W:wallet3.json;P:DH3FQkJQVgBYZ7mJKXGDTxhpeEJc6Q3ZaMBSwaHFKf6f;W:wallet3.json;TRUE;
