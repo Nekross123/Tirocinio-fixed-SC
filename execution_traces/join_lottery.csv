@@ -1,0 +1,5 @@
+1;lottery;join;W:id.json;W:wallet3.json;P:AeTc2stR3uyZHVPVKuSGmGBhCExPwkCSXiy9tQ96Skpn;143 182 244 108 218 96 178 155 52 168 84 157 26 231 22 177 49 62 73 147 176 236 47 183 180 30 44 247 239 34 75 169;158 212 57 200 152 15 239 86 180 196 226 88 120 180 59 188 207 69 204 1 245 189 194 217 124 32 73 78 61 8 171 111;200;200;W:id.json;TRUE;
+2;lottery;redeem_if_p1_no_reveal;W:id.json;W:wallet3.json;P:AeTc2stR3uyZHVPVKuSGmGBhCExPwkCSXiy9tQ96Skpn;W:wallet3.json;TRUE;
+3;lottery;reveal_p1;W:id.json;W:wallet3.json;P:B5LgQSuy8qUAHyJXVHK52hQ6ZTUxMYYne2P6Bh5SYqD2;ciao;W:id.json;TRUE;
+4;lottery;reveal_p2;W:id.json;W:wallet3.json;P:B5LgQSuy8qUAHyJXVHK52hQ6ZTUxMYYne2P6Bh5SYqD2;ciao2;W:id.json;TRUE;
+5;lottery;redeem_if_p2_no_reveal;W:id.json;W:wallet3.json;P:AeTc2stR3uyZHVPVKuSGmGBhCExPwkCSXiy9tQ96Skpn;W:id.json;TRUE;
