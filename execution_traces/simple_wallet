@@ -1,0 +1,4 @@
+1;simple_wallet;deposit;W:wallet2.json;P:EwXPTGEMnbmTJg5EwxsoB7L94XkKHsUYx3ngjfgk6G58;1000;wallet2.json;TRUE
+2;simple_wallet;create_transaction;W:wallet2.json;P:EwXPTGEMnbmTJg5EwxsoB7L94XkKHsUYx3ngjfgk6G58;P:7tEXX52oytRvyVoSdZa9SHHp4giJhL1QKPH1rnkacUSp;W:wallet3.json;txt;1000;wallet3.json;TRUE
+3;simple_wallet;execute_transaction;W:wallet2.json;P:EwXPTGEMnbmTJg5EwxsoB7L94XkKHsUYx3ngjfgk6G58;P:7tEXX52oytRvyVoSdZa9SHHp4giJhL1QKPH1rnkacUSp;W:wallet3.json;txt;wallet2.json;TRUE
+4;simple_wallet;withdraw;W:wallet2.json;P:EwXPTGEMnbmTJg5EwxsoB7L94XkKHsUYx3ngjfgk6G58;500;wallet2.json;TRUE
