@@ -1,0 +1,4 @@
+.venv
+.idea
+solana_module/anchor_module/execution_traces_results/*
+solana_module/anchor_module/.anchor_files

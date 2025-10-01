@@ -1,0 +1,31 @@
+import smartpy as sp
+
+@sp.module
+def main():
+    class SimpleTransfer(sp.Contract):
+        def __init__(self, owner, receiver):
+            self.data.owner = owner
+            self.data.receiver = receiver
+
+        @sp.entrypoint
+        def deposit(self):
+            #check if the sender is the owner
+            assert self.data.owner == sp.sender
+
+        @sp.entrypoint
+        def withdraw(self):
+            # check receiver
+            assert self.data.receiver == sp.sender, "Wrong Address"
+            # withdraw
+            sp.send(self.data.receiver, sp.balance)
+
+@sp.add_test()
+def test():
+    # set scenario
+    sc = sp.test_scenario("SimpleTransfer", main)
+    owner = sp.address(input("Insert owner address: ")) #sp.test_account("owner")
+    receiver = sp.address(input("Insert receiver address")) #sp.test_account("receiver")
+    # create object SimpleTransfer
+    sitr = main.SimpleTransfer(owner, receiver)
+    # start scenario
+    sc += sitr

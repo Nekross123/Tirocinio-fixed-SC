@@ -1,0 +1,9 @@
+anchorpy
+toml
+autoflake
+genpy
+black
+typer
+ipython
+
+# Please install anchor_module in your terminal too. A specific version MUST be installed: 0.29.0
