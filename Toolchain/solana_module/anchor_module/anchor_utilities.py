@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi - UniversitÃ  degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -218,4 +218,4 @@ def _remove_initialized_program(program_name):
         shutil.rmtree(folder_to_remove)
         print("Program removed from toolchain.")
     else:
-        print("Program folder does not exists.")
+        print("Program folder does not exist.")

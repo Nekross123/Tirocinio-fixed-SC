@@ -1,0 +1,37 @@
+{
+  "trace_title": "auction",
+  "trace_actors": [
+    "seller",
+    "bidder"
+  ],
+  "configuration": {
+    "solana": {},
+    "evm": {},
+    "tezos": {},
+    "cardano": {}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "start",
+      "waiting_time": 0,
+      "actors": [
+        "seller"
+      ],
+      "args": {},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "auction_info": { "opt" : "s",
+                          "param" :["auctioned_object"]}
+                          ,
+        "auctioned_object": "monitor",
+        "duration_slots": 50,
+        "starting_bid": 1000,
+        "provider_wallet": "seller",
+        "send_transaction": true
+      }
+    }
+  ]
+}

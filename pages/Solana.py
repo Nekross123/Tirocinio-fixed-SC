@@ -3,20 +3,24 @@ import os
 import sys
 import requests
 import json
+import asyncio
+
+toolchain_path = os.path.join(os.path.dirname(__file__), "..", "Toolchain")
+sys.path.append(toolchain_path)
+# ==============================
+# Import moduli Solana
+# ==============================
+
+import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
+from  solana_module.solana_utils import load_keypair_from_file, create_client
+import  solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+
 
 st.set_page_config(
     page_title="Solana DApp",  
     page_icon="🌞"              
 )
 
-toolchain_path = os.path.join(os.path.dirname(__file__), "..", "Toolchain")
-sys.path.append(toolchain_path)
-
-# ==============================
-# Import moduli Solana
-# ==============================
-import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
-from solana_module.solana_utils import load_keypair_from_file, create_client
 
 st.set_page_config(page_title="Solana DApp", layout="wide")
 st.title("🌞 Toolchain Solana")
@@ -27,11 +31,12 @@ st.title("🌞 Toolchain Solana")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Scegli un'azione:",
-    ("Gestione Wallet", "Compile & Deploy", "Chiudi Programma", "Altro")
+    ("Gestione Wallet", "Compile & Deploy", "Automatic Data Insertion", "Chiudi Programma", "Altro")
 )
 
 WALLETS_PATH = os.path.join(toolchain_path, "solana_module", "solana_wallets")
 ANCHOR_PROGRAMS_PATH = os.path.join(toolchain_path, "solana_module", "anchor_module", "anchor_programs")
+TRACES_PATH = os.path.join(toolchain_path, "solana_module", "anchor_module", "execution_traces")
 
 # ==============================
 # Sezione principale
@@ -202,6 +207,14 @@ elif selected_action == "Compile & Deploy":
         status_placeholder.empty()
         progress_bar.empty()
         st.success("✅ Operazione completata con successo!")
+elif selected_action == "Automatic Data Insertion":
+
+    traces_files = [f for f in os.listdir(TRACES_PATH) if f.endswith(".json")]
+    selected_trace_file = st.selectbox("Select trace", ["--"] + traces_files)
+
+    if selected_trace_file != "--" and st.button("Load and execute trace"):
+
+        asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
 
 elif selected_action == "Chiudi Programma":
     st.subheader("Chiudi un programma")

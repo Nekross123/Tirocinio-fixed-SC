@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
+import streamlit as st
 import os
 import json
 import re
@@ -30,6 +30,9 @@ import importlib.util
 from based58 import b58encode
 from solders.pubkey import Pubkey
 from solana_module.solana_utils import solana_base_path, choose_wallet, load_keypair_from_file, selection_menu
+from solana.rpc.async_api import AsyncClient
+
+
 
 
 anchor_base_path = f"{solana_base_path}/anchor_module"
@@ -67,12 +70,12 @@ def fetch_program_instructions(idl):
     return instructions
 
 def fetch_required_accounts(instruction, idl):
-    # Find the instruction in the IDL
-    instruction_dict = next(instr for instr in idl['instructions'] if instr['name'] == instruction)
-
-    # Extract required accounts, excluding the systemProgram
+    instruction_dict = next((instr for instr in idl['instructions'] if instr['name'] == instruction), None)
+    if instruction_dict is None:
+        print(f"Istruzione '{instruction}' non trovata nell'IDL.")
+        st.info(f"Istruzione '{instruction}' non trovata nell'IDL.")
+        return []
     required_accounts = [_camel_to_snake(account['name']) for account in instruction_dict['accounts'] if account['name'] != 'systemProgram']
-
     return required_accounts
 
 def choose_program():
@@ -135,6 +138,7 @@ def generate_pda(program_name, launched_from_utilities):
             choice = input()
 
             if choice == "1":
+                print("to find the seeds needed for the generation of the pda search an array named seeds in the smart contract")
                 pda_key, repeat = _choose_number_of_seed(program_name)
             elif choice == "2":
                 random_bytes = os.urandom(32)
@@ -156,6 +160,9 @@ def generate_pda(program_name, launched_from_utilities):
 
     return pda_key
 
+
+
+
 def fetch_args(instruction, idl):
     # Find instruction
     instruction_dict = next(instr for instr in idl['instructions'] if instr['name'] == instruction)
@@ -174,6 +181,19 @@ def check_if_array(arg):
         return array_type, array_length
     else:
         return None, None
+    
+def check_if_vec(arg):
+    if isinstance(arg['type'], dict) and 'vec' in arg['type']:
+        vec_type = check_type(arg['type']['vec'])
+        if vec_type is None:
+            return None
+        return vec_type
+    else:
+        return None
+
+def check_if_bytes_type(arg):
+    if arg == "bytes":
+            return True
 
 def check_type(type):
     if (type == "u8" or type == "u16" or type == "u32" or type == "u64" or type == "u128" or type == "u256"
@@ -185,8 +205,10 @@ def check_type(type):
         return "floating point number"
     elif type == "string":
         return "string"
+    elif type == "bytes":
+        return "bytes"
     else:
-        return "Unsupported type"
+        return f"Unsupported type\nThe type you are trying to use is -> {type}\n"
 
 def convert_type(type, value):
     try:
@@ -205,6 +227,203 @@ def convert_type(type, value):
             raise ValueError("Unsupported type")
     except ValueError:
         return None
+    
+def input_token_account_manually():
+
+    return input("Insert the token account(must be 44 characters long)")
+
+
+def bind_actors(trace_name):
+
+    #this function binds each actor with a wallet
+    with open(f"{anchor_base_path}/execution_traces/{trace_name}", "r") as f:
+        data = json.load(f)
+
+    association = dict()
+    trace_actors  = data["trace_actors"]
+    wallets_path = f'{solana_base_path}/solana_wallets'
+    wallets = os.listdir(wallets_path)
+    
+
+    try:
+        for j in range(len(trace_actors)):
+            association[trace_actors[j]] =  wallets[j]
+    except IndexError :
+        print("The wallet are less than the actors , impossible to associate.\nCreate more wallet or reduce the number of actors")
+
+
+    print("All the actors have been associated")
+    return association
+
+def find_args(trace):
+    return trace["args"]
+
+
+def find_sol_arg(trace):
+    return trace["solana"]
+
+#this function build the complete dictionary of whatever you need for the contract form the json trace file
+def build_complete_dict(actors , sol_args , args):
+    
+
+     
+    return actors | sol_args | args
+
+def is_pda(entry):
+    # Caso 1: file locale JSON
+    if entry.lower().endswith(".json"):
+        return False
+
+    # Caso 2: tentativo di address
+    try:
+        pubkey = Pubkey.from_string(entry)
+        return False if pubkey.is_on_curve() else True
+    except ValueError:
+        print("invalid address or wallet")
+
+def is_wallet(entry):
+    # Caso 1: file locale JSON
+    if entry.lower().endswith(".json"):
+        return True  # è un wallet file
+
+    # Caso 2: tentativo di address
+    try:
+        pubkey = Pubkey.from_string(entry)
+        return pubkey.is_on_curve()  # True = wallet address, False = PDA
+    except ValueError:
+        # Non è né un file né un address valido
+        return False
+
+
+def generate_pda_automatically(actors ,program_name ,sol_args , args):
+    
+
+
+     
+    complete_dict = build_complete_dict(actors , sol_args , args)
+
+
+
+
+
+    for arg in complete_dict:
+        value = complete_dict[arg]
+
+        
+
+        if isinstance(value, dict):
+
+            
+            param_list = []
+
+
+            
+            #takes the parameters of a pda  , the option for the type are  (s, r, p) and then there are the parameters for the seeds,
+            #s -> seeds
+            #r -> random you can omit the param list if you choose this option
+            #p -> pda (you have to put the pda key in the param list)
+            try:
+                opt = value["opt"]
+            except KeyError:
+                    print(f'No opt found ,you have to put one of the three options (s, r, p) in order to generate a PDA')
+
+
+            try:
+                param_list = value["param"]
+
+            except KeyError:
+                #this is useful in case you choose the random option and do not want to insert the param list , you can choose to put an empty list anyway
+                print(f'No param found , you choose to generate a random PDA')
+                pass
+            
+            n_seeds = len(param_list)
+            
+            pda_key = None
+
+            if opt == "s":
+                        
+                        
+
+
+                        module_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchorpy_files/program_id.py"
+                        spec = importlib.util.spec_from_file_location("program_id", module_path)
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                        program_id = module.PROGRAM_ID
+
+                        seeds = [None] * n_seeds
+                        i = 0
+                        for param in param_list:
+                                
+                                
+                                
+                                
+
+                                if param not in complete_dict:
+                                    seed = param
+                                    seeds[i] = seed.encode()
+                                    i += 1 
+                                elif is_wallet(complete_dict[param]):
+                                        chosen_wallet = complete_dict[param]
+                                        if chosen_wallet is not None:
+                                            keypair = load_keypair_from_file(f"{solana_base_path}/solana_wallets/{chosen_wallet}")
+                                            seed = keypair.pubkey()
+                                            seeds[i] = bytes(seed)
+                                            i += 1
+
+                                else:
+                                    seed = complete_dict[param]
+                                    seeds[i] = seed.encode()
+                                    i += 1 
+
+
+                        
+
+                        pda_key = Pubkey.find_program_address(seeds, program_id)[0]
+                        st.info(f'Generated key is: {pda_key}')
+                        complete_dict[arg] = str(pda_key)
+
+            elif opt == "r":
+
+                        
+                        random_bytes = os.urandom(32)
+                        base58_str = b58encode(random_bytes).decode("utf-8")
+                        pda_key = Pubkey.from_string(base58_str)
+                        print(f'Extracted pda is: {pda_key}')
+                       
+            elif opt == "p":
+                
+
+                pda_key = param_list[0]
+                if len(pda_key) == 44:
+                        
+                        pda_key =  Pubkey.from_string(pda_key)
+                        print(f'Extracted pda is: {pda_key}')
+                else :
+                      print("The PDA key must be 44 characters long")
+
+    
+    
+    return complete_dict
+
+def get_network_from_client(client):
+    """
+    Determina la rete basandosi sull'endpoint del client
+    """
+    endpoint = client._provider.endpoint_uri
+    
+    if "devnet" in endpoint.lower():
+        return "devnet"
+    elif "testnet" in endpoint.lower():
+        return "testnet"
+    elif "mainnet" in endpoint.lower() or "api.mainnet" in endpoint.lower():
+        return "mainnet-beta"
+    elif "localhost" in endpoint or "127.0.0.1" in endpoint or "8899" in endpoint:
+        return "localnet"
+    else:
+        return "unknown"
+
+    
 
 
 
@@ -271,39 +490,17 @@ def _manage_seed_insertion(program_name, n_seeds):
                 i += 1
             elif choice == "3":
                 print("Insert seed (Insert 0 to go back)")
-                print("Note: If entering a Pubkey, use the full base58 string (44 characters)")
                 seed = input()
                 if seed == '0':
                     return None, True
-                
-                # Check if the input looks like a Pubkey (44 characters, base58)
-                if len(seed) == 44:
-                    try:
-                        # Try to parse as Pubkey and use its bytes
-                        pubkey = Pubkey.from_string(seed)
-                        seeds[i] = bytes(pubkey)
-                        print(f"Parsed as Pubkey: {pubkey}")
-                        i += 1
-                    except Exception as e:
-                        print(f"Invalid Pubkey format: {e}")
-                        print("Treating as regular string instead...")
-                        seeds[i] = seed.encode()
-                        i += 1
-                else:
-                    # Treat as regular string
-                    seeds[i] = seed.encode()
-                    i += 1
+                seeds[i] = seed.encode()
+                i += 1
             elif choice == "0":
                 if i == 0:
                     return None, True
                 else:
                     i -= 1
 
-    try:
-        pda_key = Pubkey.find_program_address(seeds, program_id)[0]
-        print(f'Generated key is: {pda_key}')
-        return pda_key, False
-    except Exception as e:
-        print(f"Error generating PDA: {e}")
-        print("This combination of seeds doesn't produce a valid PDA. Try different seeds.")
-        return None, True
+    pda_key = Pubkey.find_program_address(seeds, program_id)[0]
+    print(f'Generated key is: {pda_key}')
+    return pda_key, False
