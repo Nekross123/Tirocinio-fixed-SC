@@ -50,11 +50,12 @@ def wallet_balance():
 def compile_deploy():
     wallet_file = request.json.get("wallet_file")
     deploy_flag = request.json.get("deploy", True)
+    selected_cluster = request.json.get("cluster", "Devnet")
     
     try:
         result = toolchain.compile_and_deploy_programs(
             wallet_name=wallet_file,
-            cluster="devnet",
+            cluster=selected_cluster,
             deploy=deploy_flag
         )
         return jsonify(result)
@@ -71,4 +72,4 @@ def close_program():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)

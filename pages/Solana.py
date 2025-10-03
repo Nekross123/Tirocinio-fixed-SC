@@ -63,12 +63,14 @@ elif selected_action == "Compile & Deploy":
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
     selected_wallet_file = st.selectbox("Seleziona wallet per deploy", ["--"] + wallet_files)
 
+    selected_cluster = st.selectbox("Seleziona un cluster", ["--"] + ["Devnet", "Testnet", "Mainnet"])
+
     program_files = [f for f in os.listdir(ANCHOR_PROGRAMS_PATH) if f.endswith(".rs")]
     selected_program_file = st.selectbox("Seleziona programma", ["--"] + program_files)
 
     deploy_flag = st.checkbox("Esegui deploy dopo compilazione", value=True)
 
-    if selected_wallet_file != "--" and selected_program_file != "--" and st.button("Compile & Deploy"):
+    if selected_wallet_file != "--" and selected_program_file != "--" and selected_cluster != "--" and st.button("Compile & Deploy"):
         st.info("⚡ Avvio compilazione e deploy... potrebbe richiedere qualche minuto ⏳")
         
         progress_bar = st.empty()
@@ -78,11 +80,19 @@ elif selected_action == "Compile & Deploy":
         progress_bar.progress(30)
         status_placeholder.info(f"📦 Compilazione del programma `{selected_program_file}` in corso...")
 
-        compile_res = toolchain.compile_and_deploy_programs(
-            wallet_name=selected_wallet_file,
-            cluster="devnet",
-            deploy=False
-        )
+        try:
+            compile_res = requests.post(
+                "http://127.0.0.1:5000/compile_deploy",
+                json={
+                    "wallet_file": selected_wallet_file,
+                    "cluster": selected_cluster,
+                    "deploy": False
+                }
+            )
+            compile_res = compile_res.json()
+        except requests.exceptions.RequestException as e:
+            st.error(f"Errore di connessione al backend: {e}")
+            st.stop()
     
         if compile_res["success"]:
             status_placeholder.success(f"✅ Compilazione completata per `{selected_program_file}`!")
@@ -98,11 +108,19 @@ elif selected_action == "Compile & Deploy":
         if deploy_flag:
             progress_bar.progress(70)
             status_placeholder.info(f"🚀 Deploy del programma `{selected_program_file}` in corso...")
-            deploy_res = toolchain.compile_and_deploy_programs(
-                wallet_name=selected_wallet_file,
-                cluster="devnet",
-                deploy=True
-            )
+            try:
+                deploy_res = requests.post(
+                    "http://127.0.0.1:5000/compile_deploy",
+                    json={
+                        "wallet_file": selected_wallet_file,
+                        "cluster": selected_cluster,
+                        "deploy": True
+                    }
+                )
+                deploy_res = deploy_res.json()
+            except requests.exceptions.RequestException as e:
+                st.error(f"Errore di connessione al backend: {e}")
+                st.stop()
 
             if deploy_res["success"]:
                 status_placeholder.success(

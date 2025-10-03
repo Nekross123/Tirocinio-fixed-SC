@@ -31,7 +31,7 @@ import platform
 from solana_module.solana_utils import run_command, choose_wallet, choose_cluster
 from solana_module.anchor_module.anchor_utils import load_idl
 
-anchor_base_path = os.path.join("solana_module", "anchor_module")
+anchor_base_path = os.path.join("Toolchain", "solana_module", "anchor_module")
 
 
 # -------------------------
@@ -44,10 +44,15 @@ def _remove_extension(filename: str) -> str:
 # =====================================================
 # VERSIONE HEADLESS: COMPILAZIONE E DEPLOY TUTTO JSON
 # =====================================================
-def compile_and_deploy_programs(wallet_name=None, cluster="devnet", deploy=False):
+def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False):
+   
     results = []
     operating_system = platform.system()
     programs_path = os.path.join(anchor_base_path, "anchor_programs")
+
+    allowed = {"Devnet", "Localnet", "Mainnet"}
+    if cluster not in allowed:
+        return {"success": False, "error": f"Cluster non supportato: {cluster}", "programs": []}
 
     file_names, programs = _read_rs_files(programs_path)
     if not file_names:
@@ -64,31 +69,33 @@ def compile_and_deploy_programs(wallet_name=None, cluster="devnet", deploy=False
             "anchorpy_initialized": False,
             "errors": []
         }
-
         try:
             compiled, program_id = _compile_program(program_name, operating_system, program_code)
             program_result["compiled"] = compiled
             program_result["program_id"] = program_id
 
-            if compiled:
-                # **Converti IDL prima di inizializzare AnchorPy**
-                try:
-                    _convert_idl_for_anchorpy(program_name)
-                except Exception as e:
-                    program_result["errors"].append(f"IDL conversion error: {str(e)}")
+            if not compiled:
+                program_result["errors"].append("Errore durante la compilazione")
+                results.append(program_result)
+                continue
 
-                # Poi inizializza AnchorPy
+            try:
+                idl_converted = _convert_idl_for_anchorpy(program_name)
+                if not idl_converted:
+                    program_result["errors"].append("IDL non trovata o conversione fallita")
+            except Exception as e:
+                program_result["errors"].append(f"IDL conversion error: {str(e)}")
+
+            if program_id:
                 try:
                     _initialize_anchorpy(program_name, program_id, operating_system)
                     program_result["anchorpy_initialized"] = True
                 except Exception as e:
                     program_result["errors"].append(f"AnchorPy init error: {str(e)}")
             else:
-                program_result["errors"].append("Errore durante la compilazione")
-                results.append(program_result)
-                continue
+                program_result["errors"].append("Program ID non determinato dopo la build")
 
-            if deploy:
+            if deploy and program_id:
                 deploy_res = _deploy_program(program_name, operating_system, wallet_name, cluster)
                 program_result["deployed"] = deploy_res.get("success", False)
                 if not deploy_res.get("success", False):
@@ -97,13 +104,14 @@ def compile_and_deploy_programs(wallet_name=None, cluster="devnet", deploy=False
                 else:
                     program_result["program_id"] = deploy_res.get("program_id")
                     program_result["signature"] = deploy_res.get("signature")
-
+            elif deploy and not program_id:
+                program_result["errors"].append("Deploy saltato: program_id assente")
         except Exception as e:
             program_result["errors"].append(str(e))
-
         results.append(program_result)
 
     return {"success": True, "programs": results}
+
 
 
 # =====================================================
@@ -123,14 +131,17 @@ def _read_rs_files(programs_path):
 def _compile_program(program_name, operating_system, program_code):
     done_init = _perform_anchor_initialization(program_name, operating_system)
     if not done_init:
-        return False, None
+        return False, None, None, None
 
     cargo_path = os.path.join(anchor_base_path, ".anchor_files", program_name,
                               "anchor_environment", "programs", "anchor_environment", "Cargo.toml")
-    addInitIfNeeded(cargo_path, program_code)
+    try:
+        addInitIfNeeded(cargo_path, program_code)
+    except Exception as e:
+        return False, None
 
-    done_build, program_id = _perform_anchor_build(program_name, program_code, operating_system)
-    return done_build, program_id
+    success, program_id = _perform_anchor_build(program_name, program_code, operating_system)
+    return success, program_id
 
 
 def _perform_anchor_initialization(program_name, operating_system):
@@ -145,29 +156,51 @@ def _perform_anchor_initialization(program_name, operating_system):
 
 
 def _perform_anchor_build(program_name, program_code, operating_system):
-    lib_path = os.path.join(anchor_base_path, ".anchor_files", program_name,
-                            "anchor_environment", "programs", "anchor_environment", "src", "lib.rs")
-    _write_program_in_lib_rs(lib_path, program_name, program_code)
+   
+    root_env_dir = os.path.join(anchor_base_path, ".anchor_files", program_name, "anchor_environment")
+    lib_path = os.path.join(root_env_dir, "programs", "anchor_environment", "src", "lib.rs")
 
-    env_dir = os.path.dirname(lib_path)
+    # Aggiorna codice con program_id generato da anchor init
+    try:
+        updated_code, program_id = _update_program_id(lib_path, program_code)
+    except Exception:
+        updated_code = program_code
+        program_id = None
+
+    _write_program_in_lib_rs(lib_path, program_name, updated_code)
+
     commands = [
-        f"cd {env_dir}",
-        "cargo update -p bytemuck_derive@1.9.3",
+        f"cd {root_env_dir}",
+        "cargo update -p bytemuck_derive@1.10.1", #occhio cambia spesso
         "anchor build"
     ]
-    run_command(operating_system, " && ".join(commands))
+    concatenated = " && ".join(commands)
+    result = run_command(operating_system, concatenated)
 
-    program_id = _extract_program_id(lib_path)
+    # errore -Znext
+    if result and hasattr(result, 'stderr') and result.stderr and '-Znext' in result.stderr:
+        try:
+            _impose_cargo_lock_version(program_name)
+            result = run_command(operating_system, concatenated)
+        except Exception:
+            pass
+
+    # Se non abbiamo program_id, proviamo ad estrarlo adesso dal file scritto
     if not program_id:
-        idl_path = os.path.join(anchor_base_path, ".anchor_files", program_name,
-                                "anchor_environment", "target", "idl", f"{program_name}.json")
+        program_id = _extract_program_id(lib_path)
+
+    # Fallback IDL
+    if not program_id:
+        idl_path = os.path.join(root_env_dir, "target", "idl", f"{program_name}.json")
         if os.path.exists(idl_path):
             try:
                 idl = load_idl(idl_path)
                 program_id = idl.get("metadata", {}).get("address")
             except Exception:
                 pass
-    return True, program_id
+
+    success = bool(result) and (getattr(result, 'returncode', 0) == 0) and program_id is not None
+    return success, program_id
 
 
 def _write_program_in_lib_rs(lib_path, program_name, program_code):
@@ -188,6 +221,27 @@ def _extract_program_id(lib_path):
 # =====================================================
 # CARGO.TOML E DIPENDENZE
 # =====================================================
+def _detect_dependencies_from_code(program_code: str):
+    deps = {}
+    if 'pyth_sdk_solana' in program_code or 'pyth_sdk_solana::' in program_code:
+        deps['pyth-sdk-solana'] = '0.10'
+    if 'switchboard_' in program_code:
+        deps['switchboard-solana'] = '0.29'
+    if any(x in program_code for x in ['spl_token', 'spl_token::', 'Token', 'TokenAccount']):
+        deps['spl-token'] = '7.0'
+    if 'spl_associated_token_account' in program_code:
+        deps['spl-associated-token-account'] = '4.0'
+    if 'mpl_token_metadata' in program_code or 'mpl_token_metadata::' in program_code:
+        deps['mpl-token-metadata'] = '4.1'
+    return deps
+
+def _check_for_anchor_spl_usage(program_code: str):
+    indicators = [
+        'use anchor_spl', 'anchor_spl::', 'Token,', 'TokenAccount,', 'AssociatedToken',
+        'SetAuthority', 'Transfer', 'token::', 'associated_token::'
+    ]
+    return any(i in program_code for i in indicators)
+
 def addInitIfNeeded(cargo_path, program_code):
     try:
         if not os.path.exists(cargo_path):
@@ -195,39 +249,108 @@ def addInitIfNeeded(cargo_path, program_code):
         cargo_config = toml.load(cargo_path)
         cargo_config.setdefault('dependencies', {})
 
+        needs_anchor_spl = _check_for_anchor_spl_usage(program_code)
+
         # anchor-lang
-        if 'anchor-lang' in cargo_config['dependencies']:
-            dep = cargo_config['dependencies']['anchor-lang']
-            if isinstance(dep, dict):
-                dep.setdefault('features', [])
-                if 'init-if-needed' not in dep['features']:
-                    dep['features'].append('init-if-needed')
+        anchor_dep = cargo_config['dependencies'].get('anchor-lang')
+        if anchor_dep:
+            if isinstance(anchor_dep, dict):
+                feats = anchor_dep.setdefault('features', [])
+                if 'init-if-needed' not in feats:
+                    feats.append('init-if-needed')
             else:
-                cargo_config['dependencies']['anchor-lang'] = {"version": dep, "features": ['init-if-needed']}
+                cargo_config['dependencies']['anchor-lang'] = {
+                    'version': anchor_dep,
+                    'features': ['init-if-needed']
+                }
         else:
-            cargo_config['dependencies']['anchor-lang'] = {"version": "0.31.1", "features": ['init-if-needed']}
+            cargo_config['dependencies']['anchor-lang'] = {
+                'version': '0.31.1',
+                'features': ['init-if-needed']
+            }
 
-        # anchor-spl
-        if any(x in program_code for x in ['use anchor_spl', 'anchor_spl::']) and 'anchor-spl' not in cargo_config['dependencies']:
-            cargo_config['dependencies']['anchor-spl'] = "0.31.1"
+        if needs_anchor_spl and 'anchor-spl' not in cargo_config['dependencies']:
+            cargo_config['dependencies']['anchor-spl'] = '0.31.1'
 
-        # altre dipendenze comuni
-        deps = {
-            "pyth-sdk-solana": "0.10" if 'pyth_sdk_solana' in program_code else None,
-            "switchboard-solana": "0.29" if 'switchboard_' in program_code else None,
-            "spl-token": "7.0" if any(x in program_code for x in ['spl_token', 'Token', 'TokenAccount']) else None,
-            "spl-associated-token-account": "4.0" if 'spl_associated_token_account' in program_code else None,
-            "mpl-token-metadata": "4.1" if 'mpl_token_metadata' in program_code else None
-        }
-        for k, v in deps.items():
-            if v and k not in cargo_config['dependencies']:
+        # Additional detected deps
+        detected = _detect_dependencies_from_code(program_code)
+        for k, v in detected.items():
+            if k not in cargo_config['dependencies']:
                 cargo_config['dependencies'][k] = v
 
-        with open(cargo_path, "w", encoding="utf-8") as f:
+        # Force spl-token if token-like usage
+        token_indicators = ['Token', 'TokenAccount', 'Mint', 'transfer', 'mint_to', 'burn', 'freeze_account',
+                            'thaw_account', 'set_authority', 'spl_token::', 'token::']
+        if any(t in program_code for t in token_indicators) and 'spl-token' not in cargo_config['dependencies']:
+            cargo_config['dependencies']['spl-token'] = '7.0'
+
+        # Features section
+        cargo_config.setdefault('features', {})
+        if needs_anchor_spl:
+            idl_build = cargo_config['features'].get('idl-build')
+            if not isinstance(idl_build, list):
+                idl_build = [] if idl_build is None else list(idl_build)
+            if 'anchor-lang/idl-build' not in idl_build:
+                idl_build.append('anchor-lang/idl-build')
+            if 'anchor-spl/idl-build' not in idl_build:
+                idl_build.append('anchor-spl/idl-build')
+            cargo_config['features']['idl-build'] = idl_build
+        else:
+            idl_build = cargo_config['features'].get('idl-build')
+            if not isinstance(idl_build, list):
+                idl_build = [] if idl_build is None else list(idl_build)
+            if 'anchor-lang/idl-build' not in idl_build:
+                idl_build.append('anchor-lang/idl-build')
+            cargo_config['features']['idl-build'] = idl_build
+
+        # Ensure standard features exist
+        required_features = ['default', 'cpi', 'no-entrypoint', 'no-idl', 'no-log-ix-name']
+        for feat in required_features:
+            if feat not in cargo_config['features']:
+                if feat == 'cpi':
+                    cargo_config['features'][feat] = ['no-entrypoint']
+                else:
+                    cargo_config['features'][feat] = []
+
+        # lib section
+        cargo_config.setdefault('lib', {})
+        cargo_config['lib'].setdefault('crate-type', ['cdylib', 'lib'])
+        if 'name' not in cargo_config['lib']:
+            pkg_name = cargo_config.get('package', {}).get('name', 'anchor_environment')
+            cargo_config['lib']['name'] = pkg_name
+
+        with open(cargo_path, 'w', encoding='utf-8') as f:
             toml.dump(cargo_config, f)
         return True
     except Exception:
         return False
+
+def _update_program_id(lib_rs_path, program_code):
+    """Legge il program id generato da anchor init e lo inserisce nel nuovo sorgente."""
+    if not os.path.exists(lib_rs_path):
+        raise FileNotFoundError("lib.rs non trovato per aggiornare il program id")
+    with open(lib_rs_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    match = re.search(r'declare_id!\s*\(\s*"([^"]+)"\s*\)\s*;', content)
+    if not match:
+        raise ValueError("Program ID non trovato nel lib.rs generato")
+    new_program_id = match.group(1)
+    updated = re.sub(r'declare_id!\s*\(\s*"([^"]+)"\s*\)\s*;', f'declare_id!("{new_program_id}");', program_code)
+    return updated, new_program_id
+
+def _impose_cargo_lock_version(program_name):
+    file_path = os.path.join(anchor_base_path, '.anchor_files', program_name, 'anchor_environment', 'Cargo.lock')
+    if not os.path.exists(file_path):
+        return
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for line in lines:
+                line = re.sub(r'^version = \d+', 'version = 3', line)
+                f.write(line)
+    except Exception:
+        pass
 
 
 # =====================================================
@@ -364,10 +487,9 @@ def _snake_to_camel(snake_str):
 # =====================================================
 # DEPLOY PROGRAMMI
 # =====================================================
-def _deploy_program(program_name, operating_system, wallet_name=None, cluster="devnet"):
+def _deploy_program(program_name, operating_system, wallet_name=None, cluster="Devnet"):
     if not wallet_name:
         wallet_name = choose_wallet()
-    cluster = choose_cluster() if cluster is None else cluster
 
     anchor_toml = os.path.join(anchor_base_path, ".anchor_files", program_name, "anchor_environment", "Anchor.toml")
     if not os.path.exists(anchor_toml):
