@@ -44,7 +44,7 @@ def _remove_extension(filename: str) -> str:
 # =====================================================
 # VERSIONE HEADLESS: COMPILAZIONE E DEPLOY TUTTO JSON
 # =====================================================
-def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False):
+def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False, single_program=None):
    
     results = []
     operating_system = platform.system()
@@ -54,9 +54,12 @@ def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False
     if cluster not in allowed:
         return {"success": False, "error": f"Cluster non supportato: {cluster}", "programs": []}
 
-    file_names, programs = _read_rs_files(programs_path)
+    file_names, programs = _read_rs_files(programs_path, single_program)
     if not file_names:
-        return {"success": False, "error": "Nessun programma trovato", "programs": []}
+        if single_program:
+            return {"success": False, "error": f"Programma '{single_program}' non trovato", "programs": []}
+        else:
+            return {"success": False, "error": "Nessun programma trovato", "programs": []}
 
     for file_name, program_code in zip(file_names, programs):
         program_name = _remove_extension(file_name)
@@ -117,10 +120,21 @@ def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False
 # =====================================================
 # FUNZIONI PRIVATE BASE
 # =====================================================
-def _read_rs_files(programs_path):
+def _read_rs_files(programs_path, single_program=None):
     if not os.path.isdir(programs_path):
         return [], []
-    file_names = [f for f in os.listdir(programs_path) if f.endswith(".rs")]
+    
+    all_files = [f for f in os.listdir(programs_path) if f.endswith(".rs")]
+    
+    # Se è specificato un singolo programma, filtra solo quello
+    if single_program:
+        if single_program in all_files:
+            file_names = [single_program]
+        else:
+            return [], []  # Programma non trovato
+    else:
+        file_names = all_files
+    
     anchor_programs = []
     for file_name in file_names:
         with open(os.path.join(programs_path, file_name), "r", encoding="utf-8") as f:

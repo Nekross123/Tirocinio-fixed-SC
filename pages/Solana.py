@@ -58,36 +58,73 @@ if selected_action == "Gestione Wallet":
             st.error(f"Errore di connessione al backend: {e}")
 
 elif selected_action == "Compile & Deploy":
-    st.subheader("Compila e deploya un programma Solana")
+    st.subheader("Compila e deploya programmi Solana")
     
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
     selected_wallet_file = st.selectbox("Seleziona wallet per deploy", ["--"] + wallet_files)
 
     selected_cluster = st.selectbox("Seleziona un cluster", ["--"] + ["Devnet", "Testnet", "Mainnet"])
 
-    program_files = [f for f in os.listdir(ANCHOR_PROGRAMS_PATH) if f.endswith(".rs")]
-    selected_program_file = st.selectbox("Seleziona programma", ["--"] + program_files)
+    st.markdown("----")
+    # Scegli modalità di compilazione
+    compile_mode = st.radio(
+        "Modalità di compilazione:",
+        ("Tutti i programmi", "Programma singolo"),
+        help="Scegli se compilare tutti i programmi o solo uno specifico"
+    )
 
-    deploy_flag = st.checkbox("Esegui deploy dopo compilazione", value=True)
+    selected_program_file = None
+    if compile_mode == "Programma singolo":
+        program_files = [f for f in os.listdir(ANCHOR_PROGRAMS_PATH) if f.endswith(".rs")]
+        selected_program_file = st.selectbox("Seleziona programma", ["--"] + program_files)
+    else:
+        # Mostra lista di tutti i programmi che verranno compilati
+        program_files = [f for f in os.listdir(ANCHOR_PROGRAMS_PATH) if f.endswith(".rs")]
+        if program_files:
+            st.info("📋 Programmi che verranno compilati e deployati:")
+            for i, prog in enumerate(program_files, 1):
+                st.write(f"{i}. `{prog}`")
+        else:
+            st.warning("❌ Nessun programma .rs trovato nella cartella anchor_programs")
 
-    if selected_wallet_file != "--" and selected_program_file != "--" and selected_cluster != "--" and st.button("Compile & Deploy"):
-        st.info("⚡ Avvio compilazione e deploy... potrebbe richiedere qualche minuto ⏳")
+    st.markdown("----")
+    deploy_flag = st.checkbox("Esegui anche il deploy dopo la compilazione", value=True)
+
+    # Condizioni per il pulsante
+    if compile_mode == "Tutti i programmi":
+        can_proceed = selected_wallet_file != "--" and selected_cluster != "--" and len(program_files) > 0
+    else:
+        can_proceed = selected_wallet_file != "--" and selected_program_file != "--" and selected_cluster != "--"
+
+    if can_proceed and st.button("Compile & Deploy"):
+        if compile_mode == "Programma singolo":
+            st.info(f"⚡ Avvio compilazione e deploy di `{selected_program_file}`... ⏳")
+        else:
+            st.info(f"⚡ Avvio compilazione e deploy di {len(program_files)} programmi... ⏳")
         
         progress_bar = st.empty()
         status_placeholder = st.empty()
 
         # STEP 1: Compilazione
         progress_bar.progress(30)
-        status_placeholder.info(f"📦 Compilazione del programma `{selected_program_file}` in corso...")
+        if compile_mode == "Programma singolo":
+            status_placeholder.info(f"📦 Compilazione del programma `{selected_program_file}` in corso...")
+        else:
+            status_placeholder.info(f"📦 Compilazione di {len(program_files)} programmi in corso...")
 
         try:
+            compile_payload = {
+                "wallet_file": selected_wallet_file,
+                "cluster": selected_cluster,
+                "deploy": False
+            }
+            # Aggiungi il parametro single_program se in modalità singolo programma
+            if compile_mode == "Programma singolo":
+                compile_payload["single_program"] = selected_program_file
+                
             compile_res = requests.post(
                 "http://127.0.0.1:5000/compile_deploy",
-                json={
-                    "wallet_file": selected_wallet_file,
-                    "cluster": selected_cluster,
-                    "deploy": False
-                }
+                json=compile_payload
             )
             compile_res = compile_res.json()
         except requests.exceptions.RequestException as e:
@@ -95,7 +132,11 @@ elif selected_action == "Compile & Deploy":
             st.stop()
     
         if compile_res["success"]:
-            status_placeholder.success(f"✅ Compilazione completata per `{selected_program_file}`!")
+            if compile_mode == "Programma singolo":
+                status_placeholder.success(f"✅ Compilazione completata per `{selected_program_file}`!")
+            else:
+                compiled_count = len([p for p in compile_res["programs"] if p["compiled"]])
+                status_placeholder.success(f"✅ Compilazione completata: {compiled_count}/{len(compile_res['programs'])} programmi!")
         else:
             status_placeholder.error(f"❌ Errore durante la compilazione: {compile_res.get('error', 'Errore sconosciuto')}")
             print("Dettagli JSON compilation:", compile_res)
@@ -107,15 +148,24 @@ elif selected_action == "Compile & Deploy":
         # STEP 2: Deploy (se richiesto)
         if deploy_flag:
             progress_bar.progress(70)
-            status_placeholder.info(f"🚀 Deploy del programma `{selected_program_file}` in corso...")
+            if compile_mode == "Programma singolo":
+                status_placeholder.info(f"🚀 Deploy del programma `{selected_program_file}` in corso...")
+            else:
+                status_placeholder.info(f"🚀 Deploy di {len(program_files)} programmi in corso...")
+            
             try:
+                deploy_payload = {
+                    "wallet_file": selected_wallet_file,
+                    "cluster": selected_cluster,
+                    "deploy": True
+                }
+                # Aggiungi il parametro single_program se in modalità singolo programma
+                if compile_mode == "Programma singolo":
+                    deploy_payload["single_program"] = selected_program_file
+                    
                 deploy_res = requests.post(
                     "http://127.0.0.1:5000/compile_deploy",
-                    json={
-                        "wallet_file": selected_wallet_file,
-                        "cluster": selected_cluster,
-                        "deploy": True
-                    }
+                    json=deploy_payload
                 )
                 deploy_res = deploy_res.json()
             except requests.exceptions.RequestException as e:
@@ -123,13 +173,28 @@ elif selected_action == "Compile & Deploy":
                 st.stop()
 
             if deploy_res["success"]:
-                status_placeholder.success(
-                    f"🎉 Deploy completato! Program ID: {deploy_res['programs'][0]['program_id']}"
-                )
+                if compile_mode == "Programma singolo":
+                    program_id = deploy_res['programs'][0]['program_id'] if deploy_res['programs'] else "N/A"
+                    status_placeholder.success(f"🎉 Deploy completato! Program ID: {program_id}")
+                else:
+                    deployed_count = len([p for p in deploy_res["programs"] if p["deployed"]])
+                    status_placeholder.success(f"🎉 Deploy completato: {deployed_count}/{len(deploy_res['programs'])} programmi!")
+                    
+                    # Mostra i Program ID di tutti i programmi deployati
+                    if deployed_count > 0:
+                        st.subheader("📋 Programmi deployati:")
+                        for prog in deploy_res["programs"]:
+                            if prog["deployed"] and prog["program_id"]:
+                                st.success(f"✅ `{prog['program']}`: {prog['program_id']}")
             else:
-                status_placeholder.error(
-                    f"❌ Deploy fallito: {deploy_res['programs'][0].get('errors')}"
-                )
+                if compile_mode == "Programma singolo":
+                    errors = deploy_res['programs'][0].get('errors', []) if deploy_res['programs'] else ["Errore sconosciuto"]
+                    status_placeholder.error(f"❌ Deploy fallito: {'; '.join(errors)}")
+                else:
+                    failed_programs = [p for p in deploy_res["programs"] if not p["deployed"]]
+                    status_placeholder.error(f"❌ Deploy fallito per {len(failed_programs)} programmi")
+                    for prog in failed_programs:
+                        st.error(f"❌ `{prog['program']}`: {'; '.join(prog.get('errors', ['Errore sconosciuto']))}")
             
             print("Dettagli JSON compile & deploy:", json.dumps(deploy_res, indent=2))
 
