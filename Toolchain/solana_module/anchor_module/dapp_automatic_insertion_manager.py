@@ -21,6 +21,49 @@ from solana.rpc.async_api import AsyncClient
 # ====================================================
 # PUBLIC FUNCTIONS
 # ====================================================
+def upload_trace_file():
+    """UI component for uploading execution trace files via drag & drop."""
+    
+    st.subheader("📤 Upload Execution Trace")
+    
+    uploaded_file = st.file_uploader(
+        "Drag and drop your execution trace JSON file here",
+        type=['json'],
+        help="Upload a JSON file containing the execution trace"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            # Read and validate JSON
+            file_content = uploaded_file.read()
+            json_data = json.loads(file_content)
+            
+            # Validate required fields
+            required_fields = ["trace_title", "trace_execution"]
+            missing_fields = [field for field in required_fields if field not in json_data]
+            
+            if missing_fields:
+                st.error(f"❌ Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
+                return
+            
+            # Save to execution_traces folder
+            traces_folder = f"{anchor_base_path}/execution_traces/"
+            os.makedirs(traces_folder, exist_ok=True)
+            
+            file_path = os.path.join(traces_folder, uploaded_file.name)
+            
+            # Save the file
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, indent=2)
+            
+            st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully!")
+            st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
+                
+        except json.JSONDecodeError:
+            st.error("❌ Invalid JSON file. Please upload a valid JSON trace file.")
+        except Exception as e:
+            st.error(f"❌ Error uploading file: {str(e)}")
+
 
 async def run_execution_trace(file_name):
     """Run automatic execution trace with minimal UI feedback."""
@@ -274,8 +317,6 @@ async def run_execution_trace(file_name):
 
             # json building
 
-
-            
             if str(complete_dict["send_transaction"]).lower() == 'true':
                 if is_deployed:
                     transaction_hash = await send_transaction(provider, transaction)

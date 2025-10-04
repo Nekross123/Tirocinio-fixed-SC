@@ -1,3 +1,4 @@
+from Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager import upload_trace_file
 import streamlit as st
 import os
 import sys
@@ -215,6 +216,9 @@ elif selected_action == "Automatic Data Insertion":
     if selected_trace_file != "--" and st.button("Load and execute trace"):
 
         asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
+
+    st.markdown("----")
+    upload_trace_file()
 
 elif selected_action == "Chiudi Programma":
     st.subheader("Chiudi un programma")
