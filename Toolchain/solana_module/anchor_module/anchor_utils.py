@@ -33,9 +33,7 @@ from solana_module.solana_utils import solana_base_path, choose_wallet, load_key
 from solana.rpc.async_api import AsyncClient
 
 
-
-
-anchor_base_path = f"{solana_base_path}/anchor_module"
+anchor_base_path = os.path.dirname(os.path.abspath(__file__))
 
 
 # ====================================================
@@ -242,15 +240,23 @@ def bind_actors(trace_name):
     association = dict()
     trace_actors  = data["trace_actors"]
     wallets_path = f'{solana_base_path}/solana_wallets'
-    wallets = os.listdir(wallets_path)
     
+    # Filter only .json wallet files
+    all_files = os.listdir(wallets_path)
+    wallets = [f for f in all_files if f.endswith('.json') and os.path.isfile(os.path.join(wallets_path, f))]
+    
+    if len(wallets) < len(trace_actors):
+        print(f"Not enough wallet files! Found {len(wallets)} wallets but need {len(trace_actors)} for actors: {trace_actors}")
+        print(f"Available wallets: {wallets}")
+        return {}
 
     try:
         for j in range(len(trace_actors)):
-            association[trace_actors[j]] =  wallets[j]
-    except IndexError :
-        print("The wallet are less than the actors , impossible to associate.\nCreate more wallet or reduce the number of actors")
-
+            association[trace_actors[j]] = wallets[j]
+            print(f"  Actor '{trace_actors[j]}' -> Wallet '{wallets[j]}'")
+    except IndexError:
+        print("The wallets are less than the actors, impossible to associate.\nCreate more wallets or reduce the number of actors")
+        return {}
 
     print("All the actors have been associated")
     return association

@@ -23,32 +23,41 @@ from solana.rpc.async_api import AsyncClient
 # ====================================================
 
 async def run_execution_trace(file_name):
-    # Fetch initialized programs
-
-    st.info(f"Running execution trace {file_name}...")
-
+    """Run automatic execution trace with minimal UI feedback."""
+    
+    # Create placeholder for status message
+    status_placeholder = st.empty()
+    
+    # Show initial message
+    status_placeholder.info(f"⏳ Executing automatic trace: **{file_name}**...")
+    
+    # Check initialized programs
     initialized_programs = fetch_initialized_programs()
     if len(initialized_programs) == 0:
-        print("No program has been initialized yet.")
+        status_placeholder.error("❌ No program has been initialized yet. Please compile an Anchor program first.")
+        return
+
+    if file_name is None:
+        status_placeholder.error("❌ No trace file selected")
         return
 
     results = []
 
-
-    if file_name is None:
-        return
-
-
-
     json_file = _read_json(f"{anchor_base_path}/execution_traces/{file_name}")
+    if json_file is None:
+        status_placeholder.error(f"❌ Failed to read trace file: {file_name}")
+        return
+        
     actors = bind_actors(file_name)
-   
+    if not actors:
+        status_placeholder.error("❌ Failed to bind actors to wallets")
+        return
 
     # Create async client outside the loop
     client = AsyncClient("https://api.devnet.solana.com")
     #search fotr the network
     network = get_network_from_client(client)
-    progrma_name = json_file["trace_title"]
+    program_name = json_file["trace_title"]
 
     try:
         # For each execution trace
@@ -60,12 +69,7 @@ async def run_execution_trace(file_name):
             sol_args = find_sol_arg(trace)
 
             
-            complete_dict = generate_pda_automatically(actors ,progrma_name , sol_args , args)
-            
-            
-
-            
-            
+            complete_dict = generate_pda_automatically(actors ,program_name , sol_args , args)
 
             # Get execution trace ID
             trace_id = trace["sequence_id"]
@@ -123,30 +127,22 @@ async def run_execution_trace(file_name):
                             print(f"Error checking slot: {e}")
                             await asyncio.sleep(2)
 
-                
 
-            
 
 
             # Initialize remaining accounts list
             remaining_accounts = []
-            from solders.instruction import AccountMeta
             
             for account in required_accounts:
-                # If it is a wallet
-                st.info("Checkpoint 2 reached")
-
+                # Process each required account
                 if not is_pda(complete_dict[account]):
                     
-                    
-                    file_path = f"{solana_base_path}/solana_wallets/{complete_dict[account]}"
-
+                    wallet_value = complete_dict[account]
+                    file_path = f"{solana_base_path}/solana_wallets/{wallet_value}"
 
                     keypair = load_keypair_from_file(file_path)
                     if keypair is None:
                         print(f"Wallet for account {account} not found at path {file_path}.")
-
-
                         return
                     if account in signer_accounts:
                         signer_accounts_keypairs[account] = keypair
@@ -181,10 +177,7 @@ async def run_execution_trace(file_name):
             required_args = fetch_args(instruction, idl)
             final_args = dict()
             for arg in required_args:
-                st.info("Checkpoint 3 reached")
-
                 
-               
                 # Manage arrays
                 array_type, array_length = check_if_array(arg)
                 vec_type = check_if_vec(arg)
@@ -300,15 +293,16 @@ async def run_execution_trace(file_name):
 
             # Append results
             results.append(json_action)
-            print(f"Execution trace {trace["sequence_id"]} results computed!")
 
     finally:
         await client.close()
 
-    # json writing
+    # Write results
     file_name_without_extension = file_name.removesuffix(".json")
-    file_path = _write_json(file_name_without_extension, results , network)
-    print(f"Results written successfully to {file_path}")
+    file_path = _write_json(file_name_without_extension, results, network)
+    
+    # Replace initial message with completion message
+    status_placeholder.success(f"✅ Execution completed successfully! Results saved to: `{os.path.basename(file_path)}`")
 
 
 # ====================================================

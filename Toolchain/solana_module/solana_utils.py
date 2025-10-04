@@ -32,7 +32,7 @@ import platform
 # Percorso base del progetto, utile per tutti i path relativi ad Anchor
 anchor_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-solana_base_path = "solana_module"
+solana_base_path = os.path.dirname(os.path.abspath(__file__))
 
 
 # ====================================================
