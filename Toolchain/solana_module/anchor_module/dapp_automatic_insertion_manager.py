@@ -5,10 +5,10 @@ import json
 import asyncio
 from solders.pubkey import Pubkey
 from anchorpy import Wallet, Provider
-from solana_module.anchor_module.transaction_manager import build_transaction, measure_transaction_size, \
+from Toolchain.solana_module.anchor_module.transaction_manager import build_transaction, measure_transaction_size, \
     compute_transaction_fees, send_transaction
-from solana_module.solana_utils import load_keypair_from_file, solana_base_path, create_client, selection_menu
-from solana_module.anchor_module.anchor_utils import anchor_base_path, fetch_initialized_programs, \
+from Toolchain.solana_module.solana_utils import load_keypair_from_file, solana_base_path, create_client, selection_menu
+from Toolchain.solana_module.anchor_module.anchor_utils import anchor_base_path, fetch_initialized_programs, \
     fetch_program_instructions, fetch_required_accounts, fetch_signer_accounts, fetch_args, check_type, convert_type, \
     fetch_cluster, load_idl, check_if_array , check_if_vec , bind_actors , is_pda  , generate_pda_automatically , find_sol_arg , \
     get_network_from_client , find_args
@@ -108,7 +108,7 @@ async def run_execution_trace(file_name):
 
             args = find_args(trace)
 
-            st.info(f"Processing execution trace with ID {trace['sequence_id']} with args {args}...") 
+            st.info(f"Processing execution trace with ID {trace['sequence_id']}.") 
             sol_args = find_sol_arg(trace)
 
             
