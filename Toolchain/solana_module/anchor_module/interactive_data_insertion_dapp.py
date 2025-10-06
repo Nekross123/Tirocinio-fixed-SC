@@ -37,47 +37,23 @@ from Toolchain.solana_module.anchor_module.transaction_manager import (
 )
 
 # ------------------------------------------------------------------
-# Async helpers
+# Async perchè Streamlit è considerato come "already running loop" e quindi non si può usare asyncio.run()
 # ------------------------------------------------------------------
-
+import nest_asyncio
 def _run_async(coro):
-    """Run an async coroutine safely. Simple version like CLI but handles Streamlit."""
+    """Run an async """
     try:
         # Check if there's already a running loop (Streamlit case)
         loop = asyncio.get_running_loop()
         # If we're here, there's a running loop. We need to use nest_asyncio or create new loop
-        import nest_asyncio
         nest_asyncio.apply()
         return asyncio.run(coro)
     except RuntimeError:
         # No running loop - just use asyncio.run like in CLI
         return asyncio.run(coro)
-    except ImportError:
-        # nest_asyncio not available, use thread workaround
-        import threading
-        result = []
-        error = []
-        
-        def run_in_thread():
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                result.append(new_loop.run_until_complete(coro))
-            except Exception as e:
-                error.append(e)
-            finally:
-                new_loop.close()
-        
-        thread = threading.Thread(target=run_in_thread)
-        thread.start()
-        thread.join()
-        
-        if error:
-            raise error[0]
-        return result[0]
 
 
-# ------------------------------ Fetch helpers ------------------------------ #
+# ------------------------------ Fetch  ------------------------------ #
 
 def fetch_programs() -> List[str]:
     return fetch_initialized_programs()
@@ -336,6 +312,7 @@ async def _build_and_send_internal(program: str,
     # Create client and provider INSIDE the async context
     client = create_client(cluster)
     provider_obj = Provider(client, Wallet(provider_kp))
+    
     
     try:
         # Build transaction

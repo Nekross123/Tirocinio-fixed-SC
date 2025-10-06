@@ -25,10 +25,9 @@ from Toolchain.solana_module.anchor_module.interactive_data_insertion_dapp impor
 )
 
 # --------------------------------------------------
-# Helper UI functions (stateless) for Interactive section
+#  for Interactive section
 # --------------------------------------------------
 def _render_account_block(acc: str, wallet_files: list[str]):
-    """Render a single account configuration section (stateless). Uses selectbox to avoid radio refresh issues."""
     with st.expander(f"Account: {acc}", expanded=False):
         method = st.selectbox(
             f"Metodo per {acc}",
@@ -134,7 +133,6 @@ if selected_action == "Gestione Wallet":
             st.error(f"Errore di connessione al backend: {e}")
 
 elif selected_action == "Compile & Deploy":
-    st.subheader("Compila e deploya programmi Solana")
     
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
     selected_wallet_file = st.selectbox("Seleziona wallet per deploy", ["--"] + wallet_files)
@@ -290,7 +288,6 @@ elif selected_action == "Automatic Data Insertion":
     st.markdown("----")
     upload_trace_file()
 elif selected_action == "Interactive Data Insertion":
-    st.subheader("Interactive Data Insertion (Stateless)")
     st.caption("Compila tutto e invia in una sola volta.")
 
     programs = fetch_programs()
@@ -329,7 +326,7 @@ elif selected_action == "Interactive Data Insertion":
             account_inputs.append(data)
 
         # Form solo per payees/args/provider + submit
-        with st.form("interactive_tx_form_stateless"):
+        with st.form("interactive_tx_form"):
 
             # Payees
             payees = []
