@@ -26,8 +26,8 @@ import toml
 import re
 import os
 import platform
-from solana_module.solana_utils import choose_wallet, run_command, choose_cluster
-from solana_module.anchor_module.anchor_utils import anchor_base_path, load_idl
+from Toolchain.solana_module.solana_utils import choose_wallet, run_command, choose_cluster
+from Toolchain.solana_module.anchor_module.anchor_utils import anchor_base_path, load_idl
 
 
 # ====================================================

@@ -22,7 +22,7 @@
 
 
 import asyncio
-from solana_module.solana_utils import choose_wallet, create_client, load_keypair_from_file, solana_base_path, \
+from Toolchain.solana_module.solana_utils import choose_wallet, create_client, load_keypair_from_file, solana_base_path, \
     choose_cluster, perform_program_closure
 
 
