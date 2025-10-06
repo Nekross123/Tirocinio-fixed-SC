@@ -5,7 +5,7 @@
     "bidder"
   ],
   "configuration": {
-    "solana": {},
+    "solana": {"use" : "True"},
     "evm": {},
     "tezos": {},
     "cardano": {}
@@ -26,7 +26,7 @@
         "auction_info": { "opt" : "s",
                           "param" :["auctioned_object"]}
                           ,
-        "auctioned_object": "monitor",
+        "auctioned_object": "cdcdcdcdccdcc",
         "duration_slots": 50,
         "starting_bid": 1000,
         "provider_wallet": "seller",

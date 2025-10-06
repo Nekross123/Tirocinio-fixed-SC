@@ -7,6 +7,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
 
 from solana_module.solana_utils import load_keypair_from_file, create_client
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
+import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
 
 app = Flask(__name__)
 
@@ -63,14 +65,52 @@ def compile_deploy():
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+    
+
+# ==============================
+# ROUTE Automatic Data Insertion
+# ==============================
+@app.route("/automatic_data_insertion", methods=["POST"])
+def automatic_data_insertion():
+    selected_trace_file = request.json.get("trace_file")
+    traces_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", "execution_traces")
+    trace_file_path = os.path.join(traces_path, selected_trace_file) if selected_trace_file else None
+
+    if not selected_trace_file or not os.path.isfile(trace_file_path):
+        print("Trace file non trovato:", trace_file_path)
+        return jsonify({"success": False, "error": "Trace file non trovato"}), 400
+
+    try:
+        result = asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
+        return jsonify({"success": True, "result": result})
+    except Exception as e:
+        import traceback
+        print("Errore automatic_data_insertion:", traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ==============================
 # ROUTE Placeholder Chiudi Programma
 # ==============================
 @app.route("/close_program", methods=["POST"])
 def close_program():
-    program_id = request.json.get("program_id")
-    return jsonify({"message": f"Funzione chiudi programma non implementata. ID ricevuto: {program_id}"})
+    selected_program = request.json.get("program")
+    base_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", ".anchor_files")
+
+    # Percorso completo della cartella del programma
+    program_dir = os.path.join(base_path, selected_program) if selected_program else None
+
+    # Controlla che sia una cartella valida
+    if not selected_program or not os.path.exists(program_dir) or not os.path.isdir(program_dir):
+        print("Cartella del programma non trovata:", program_dir)
+        return jsonify({"success": False, "error": "Cartella del programma non trovata"}), 400
+
+    try:
+        result = close_anchor_program_dapp(selected_program)
+        return jsonify({"success": True, "result": result})
+    except Exception as e:
+        import traceback
+        print("Errore in close_program:", traceback.format_exc())
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":

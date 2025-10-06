@@ -1,4 +1,4 @@
-from Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager import upload_trace_file
+from solana_module.anchor_module.dapp_automatic_insertion_manager import upload_trace_file , fetch_initialized_programs
 import streamlit as st
 import os
 import sys
@@ -32,7 +32,7 @@ st.title("🌞 Toolchain Solana")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Scegli un'azione:",
-    ("Gestione Wallet", "Compile & Deploy", "Automatic Data Insertion", "Chiudi Programma", "Altro")
+    ("Manage Wallets", "Compile & Deploy", "Close programs","Automatic Data Insertion", "Other")
 )
 
 WALLETS_PATH = os.path.join(toolchain_path, "solana_module", "solana_wallets")
@@ -138,12 +138,15 @@ elif selected_action == "Compile & Deploy":
             st.stop()
     
         if compile_res["success"]:
+
+            st.empty()
             if compile_mode == "Programma singolo":
                 status_placeholder.success(f"✅ Compilazione completata per `{selected_program_file}`!")
             else:
                 compiled_count = len([p for p in compile_res["programs"] if p["compiled"]])
                 status_placeholder.success(f"✅ Compilazione completata: {compiled_count}/{len(compile_res['programs'])} programmi!")
         else:
+            st.empty()
             status_placeholder.error(f"❌ Errore durante la compilazione: {compile_res.get('error', 'Errore sconosciuto')}")
             print("Dettagli JSON compilation:", compile_res)
             st.stop()
@@ -208,20 +211,67 @@ elif selected_action == "Compile & Deploy":
         status_placeholder.empty()
         progress_bar.empty()
         st.success("✅ Operazione completata con successo!")
+
+
 elif selected_action == "Automatic Data Insertion":
 
-    traces_files = [f for f in os.listdir(TRACES_PATH) if f.endswith(".json")]
-    selected_trace_file = st.selectbox("Select trace", ["--"] + traces_files)
+    fetched_programs = fetch_initialized_programs()
+    if not fetched_programs:
+        st.warning("No prorgam initialized yet , please compile and deploy a program first")
+    else:
 
-    if selected_trace_file != "--" and st.button("Load and execute trace"):
 
-        asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
+        traces_files = [f for f in os.listdir(TRACES_PATH) if f.endswith(".json")]
+        selected_trace_file = st.selectbox("Select trace", ["--"] + traces_files)
 
-    st.markdown("----")
-    upload_trace_file()
+        if selected_trace_file != "--" and st.button("Load and execute trace"):
+            try:
+                trace_res = requests.post(
+                    "http://127.0.0.1:5000/automatic_data_insertion",
+                    json={"trace_file": selected_trace_file}
+                )
 
-elif selected_action == "Chiudi Programma":
-    st.subheader("Chiudi un programma")
+                if trace_res.status_code == 200:
+                    st.info("Trace loaded successfully.")
+                    build_table(trace_res.json().get("result"))
+                else:
+                    st.error(trace_res.json().get("error", "Errore sconosciuto"))
+            except requests.exceptions.RequestException as e:
+                st.error(f"Errore di connessione al backend: {e}")
+                st.stop()
+
+
+        
+
+   
+    
+
+elif selected_action == "Close programs":
+    
+
+    fetched_programs = fetch_initialized_programs()
+
+    if not fetched_programs:
+        st.warning("No prorgams initialized yet , please compile and deploy a program first")
+    else:
+        selected_program = st.selectbox("Select a program", ["--"] + fetched_programs)
+
+
+        if selected_program != "--" and st.button("Close program"):
+            try:
+                trace_res = requests.post(
+                    "http://127.0.0.1:5000/close_program",
+                    json={"program": selected_program}
+                )
+
+                if trace_res.status_code == 200:
+                    st.info("Program closed successfully.")
+
+                else:
+                    st.error(trace_res.json().get("error", "Errore sconosciuto"))
+            except requests.exceptions.RequestException as e:
+                st.error(f"Errore di connessione al backend: {e}")
+                st.stop()
 
 else:
     st.subheader("Altre funzionalità")

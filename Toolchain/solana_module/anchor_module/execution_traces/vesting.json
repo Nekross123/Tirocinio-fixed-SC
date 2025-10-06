@@ -1,0 +1,67 @@
+{
+  "trace_title": "vesting",
+  "trace_actors": [
+    "funder",
+    "beneficiary"
+  ],
+  "configuration": {
+    "solana": {
+      "use": "True"
+    },
+    "evm": {},
+    "tezos": {},
+    "cardano": {}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "initialize",
+      "waiting_time": 0,
+      "actors": [
+        "funder",
+        "beneficiary"
+      ],
+      "args": {
+        "start_slot": 412775700,
+        "duration": 150,
+        "lamports_amount": 10000
+      },
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "vesting_info": {
+          "opt": "s",
+          "param": [
+            "beneficiary"
+          ]
+        },
+        "provider_wallet": "funder",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "release",
+      "waiting_time": 170,
+      "actors": [
+        "beneficiary",
+        "funder"
+      ],
+      "args": {},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "vesting_info": {
+          "opt": "s",
+          "param": [
+            "beneficiary"
+          ]
+        },
+        "provider_wallet": "funder",
+        "send_transaction": true
+      }
+    }
+  ]
+}

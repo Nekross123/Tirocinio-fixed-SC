@@ -1,7 +1,9 @@
 import streamlit as st
+import pandas as pd
+import json
+from io import StringIO
 import os
 import re
-import json
 import asyncio
 from solders.pubkey import Pubkey
 from anchorpy import Wallet, Provider
@@ -46,18 +48,31 @@ def upload_trace_file():
                 st.error(f"❌ Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
                 return
             
-            # Save to execution_traces folder
-            traces_folder = f"{anchor_base_path}/execution_traces/"
-            os.makedirs(traces_folder, exist_ok=True)
             
-            file_path = os.path.join(traces_folder, uploaded_file.name)
             
-            # Save the file
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(json_data, f, indent=2)
-            
-            st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully!")
-            st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
+            solana_config = json_data['configuration']['solana']
+
+            if solana_config:
+                
+                print("Solana configuration found in the trace file.")
+
+            else:
+               
+               print("No Solana configuration found in the trace file.")
+               
+            if solana_config :
+                # Save to execution_traces folder
+                traces_folder = f"{anchor_base_path}/execution_traces/"
+                os.makedirs(traces_folder, exist_ok=True)
+
+                file_path = os.path.join(traces_folder, uploaded_file.name)
+
+                # Save the file
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(json_data, f, indent=2)
+
+                st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully!")
+                st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
                 
         except json.JSONDecodeError:
             st.error("❌ Invalid JSON file. Please upload a valid JSON trace file.")
@@ -201,16 +216,6 @@ async def run_execution_trace(file_name):
                     except Exception as e:
                         print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
                         return
-                # If it is a Token Account (manual input)
-                #elif execution_trace[i].startswith("T:"):
-                #    extracted_key = execution_trace[i].removeprefix('T:')
-                #    try:
-                #        token_account_key = Pubkey.from_string(extracted_key)
-                #        final_accounts[account] = token_account_key
-                #        print(f"Token account {account} added with address: {token_account_key}")
-                #    except Exception as e:
-                #        print(f"Invalid token account key format for account {account}: {extracted_key}. Error: {e}")
-                #        return
                 else:
                     print("work on errors")
                     return
@@ -340,10 +345,11 @@ async def run_execution_trace(file_name):
 
     # Write results
     file_name_without_extension = file_name.removesuffix(".json")
-    file_path = _write_json(file_name_without_extension, results, network)
+    file_path,final = _write_json(file_name_without_extension, results, network)
     
     # Replace initial message with completion message
     status_placeholder.success(f"✅ Execution completed successfully! Results saved to: `{os.path.basename(file_path)}`")
+    return {"success": True, "results_file": final}
 
 
 # ====================================================
@@ -396,4 +402,142 @@ def _write_json(file_name, results , network):
     with open(json_file, "w") as f:
         json.dump(final, f, indent=2)
     
-    return json_file
+    return json_file ,final
+
+
+
+
+
+def build_table(data):
+    results = data["results_file"]
+    actions = results["actions"]
+    
+    # --- Stile personalizzato ---
+    st.markdown("""
+    <style>
+        /* Titoli principali */
+        h3 {
+            font-size: 2rem !important;
+        }
+
+        /* Titoli delle metriche */
+        .info-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #cccccc;
+            margin-bottom: 0.3rem;
+        }
+
+        /* Valori delle metriche (Network, Platform, Trace title) */
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #ffffff;
+            margin-bottom: 0.8rem;
+        }
+
+        /* Tabella verticale */
+        .vertical-table {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        .vertical-table-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 0;
+        }
+        .vertical-table-label {
+            color: #aaa;
+            font-weight: 600;
+        }
+        .vertical-table-value {
+            color: #fff;
+            word-break: break-all;
+            text-align: right;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # --- Info generali (su una riga) ---
+    st.markdown("### 📋 Generic Info")
+    cols = st.columns(3)
+
+    with cols[0]:
+        st.markdown("<div class='info-title'>Network</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['network']}</div>", unsafe_allow_html=True)
+
+    with cols[1]:
+        st.markdown("<div class='info-title'>Platform</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['platform']}</div>", unsafe_allow_html=True)
+
+    with cols[2]:
+        st.markdown("<div class='info-title'>Trace Title</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['trace_title']}</div>", unsafe_allow_html=True)
+    
+    # --- Azioni in formato verticale ---
+    st.markdown("### ⚙️ Actions")
+    
+    action = actions[0]  # Se c'è una sola azione, la prendiamo direttamente
+    st.markdown('<div class="vertical-table">', unsafe_allow_html=True)
+    for key, value in action.items():
+        st.markdown(
+            f"""
+            <div class="vertical-table-row">
+                <div class="vertical-table-label">{key.replace('_', ' ').title()}</div>
+                <div class="vertical-table-value">{value}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # --- Pulsanti di Download ---
+    st.markdown("### 💾 Download Results")
+    
+    # Prepara i dati per il download
+    download_data = {
+        "network": results['network'],
+        "platform": results['platform'],
+        "trace_title": results['trace_title'],
+        "actions": actions
+    }
+    
+    # Converti in JSON
+    json_data = json.dumps(download_data, indent=2)
+    
+    # Prepara dati per CSV
+    csv_rows = []
+    for action in actions:
+        row = {
+            "Network": results['network'],
+            "Platform": results['platform'],
+            "Trace Title": results['trace_title']
+        }
+        row.update(action)
+        csv_rows.append(row)
+    
+    df = pd.DataFrame(csv_rows)
+    csv_data = df.to_csv(index=False)
+    
+    # Due colonne per i pulsanti di download
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            label="📥 Download as JSON",
+            data=json_data,
+            file_name=f"{results['trace_title']}_results.json",
+            mime="application/json"
+        )
+    
+    with col2:
+        st.download_button(
+            label="📊 Download as CSV",
+            data=csv_data,
+            file_name=f"{results['trace_title']}_results.csv",
+            mime="text/csv"
+        )
