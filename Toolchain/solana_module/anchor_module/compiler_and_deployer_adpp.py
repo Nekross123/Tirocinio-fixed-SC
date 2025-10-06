@@ -28,8 +28,8 @@ import toml
 import sys
 import subprocess
 import platform
-from solana_module.solana_utils import run_command, choose_wallet, choose_cluster
-from solana_module.anchor_module.anchor_utils import load_idl
+from Toolchain.solana_module.solana_utils import run_command, choose_wallet, choose_cluster
+from Toolchain.solana_module.anchor_module.anchor_utils import load_idl
 
 anchor_base_path = os.path.join("Toolchain", "solana_module", "anchor_module")
 

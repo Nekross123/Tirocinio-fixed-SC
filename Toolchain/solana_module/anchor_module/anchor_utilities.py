@@ -26,10 +26,10 @@ from pathlib import Path
 import toml
 import shutil
 import os
-from solana_module.anchor_module.anchor_utils import fetch_initialized_programs, generate_pda, fetch_program_instructions, \
+from Toolchain.solana_module.anchor_module.anchor_utils import fetch_initialized_programs, generate_pda, fetch_program_instructions, \
     fetch_args, load_idl, anchor_base_path, check_type, fetch_required_accounts, fetch_signer_accounts, choose_program, \
     choose_instruction, check_if_array
-from solana_module.solana_utils import perform_program_closure
+from Toolchain.solana_module.solana_utils import perform_program_closure
 
 
 # ====================================================

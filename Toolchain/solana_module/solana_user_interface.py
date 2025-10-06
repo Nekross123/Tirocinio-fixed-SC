@@ -21,8 +21,9 @@
 # THE SOFTWARE.
 
 
-from solana_module.solana_utilities import request_balance, get_public_key, close_program
-from solana_module.anchor_module import anchor_user_interface
+import asyncio
+from Toolchain.solana_module.solana_utilities import request_balance, get_public_key, close_program
+from Toolchain.solana_module.anchor_module import anchor_user_interface
 # ADD HERE NEW SOLANA LANGUAGES REQUIRED IMPORTS (STARTING FROM THE PROJECT ROOT)
 
 

@@ -22,12 +22,12 @@
 
 
 import asyncio
-from solana_module.anchor_module.automatic_data_insertion_manager import run_execution_trace
-from solana_module.anchor_module.anchor_utilities import choose_program_for_pda_generation, get_initialized_programs, \
+from Toolchain.solana_module.anchor_module.automatic_data_insertion_manager import run_execution_trace
+from Toolchain.solana_module.anchor_module.anchor_utilities import choose_program_for_pda_generation, get_initialized_programs, \
     get_program_instructions, get_instruction_args, get_instruction_accounts, close_anchor_program, \
     remove_anchor_program
-from solana_module.anchor_module.program_compiler_and_deployer import compile_programs
-from solana_module.anchor_module.interactive_data_insertion_manager import choose_program_to_run
+from Toolchain.solana_module.anchor_module.program_compiler_and_deployer import compile_programs
+from Toolchain.solana_module.anchor_module.interactive_data_insertion_manager import choose_program_to_run
 
 
 def choose_action():
