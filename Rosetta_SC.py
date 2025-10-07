@@ -1,4 +1,6 @@
-from Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager import upload_trace_file , fetch_initialized_programs , build_table
+from Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager import  fetch_initialized_programs , build_table
+from Rosetta_utils import upload_trace_file
+from flask import Flask, request, jsonify
 import streamlit as st
 import pandas as pd
 import os
@@ -6,7 +8,7 @@ import sys
 import requests
 import json
 import asyncio
-
+sys.path.append(os.path.dirname(__file__))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
 
 # ==============================

@@ -4,7 +4,8 @@ import sys
 import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
-
+import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
 from solana_module.solana_utils import load_keypair_from_file, create_client
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
 from solana_module.anchor_module.interactive_data_insertion_dapp import (
@@ -228,7 +229,7 @@ def close_program():
 
     try:
         result = close_anchor_program_dapp(selected_program)
-        return jsonify({"success": True, "result": result})
+        return result
     except Exception as e:
         import traceback
         print("Errore in close_program:", traceback.format_exc())
