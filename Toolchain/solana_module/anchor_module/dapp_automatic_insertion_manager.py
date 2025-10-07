@@ -13,7 +13,7 @@ from Toolchain.solana_module.solana_utils import load_keypair_from_file, solana_
 from Toolchain.solana_module.anchor_module.anchor_utils import anchor_base_path, fetch_initialized_programs, \
     fetch_program_instructions, fetch_required_accounts, fetch_signer_accounts, fetch_args, check_type, convert_type, \
     fetch_cluster, load_idl, check_if_array , check_if_vec , bind_actors , is_pda  , generate_pda_automatically , find_sol_arg , \
-    get_network_from_client , find_args
+    get_network_from_client , find_args ,is_wallet
 
 from spl.token.async_client import AsyncToken
 from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
@@ -23,61 +23,7 @@ from solana.rpc.async_api import AsyncClient
 # ====================================================
 # PUBLIC FUNCTIONS
 # ====================================================
-def upload_trace_file():
-    """UI component for uploading execution trace files via drag & drop."""
-    
-    st.subheader("📤 Upload Execution Trace")
-    
-    uploaded_file = st.file_uploader(
-        "Drag and drop your execution trace JSON file here",
-        type=['json'],
-        help="Upload a JSON file containing the execution trace"
-    )
-    
-    if uploaded_file is not None:
-        try:
-            # Read and validate JSON
-            file_content = uploaded_file.read()
-            json_data = json.loads(file_content)
-            
-            # Validate required fields
-            required_fields = ["trace_title", "trace_execution"]
-            missing_fields = [field for field in required_fields if field not in json_data]
-            
-            if missing_fields:
-                st.error(f"❌ Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
-                return
-            
-            
-            
-            solana_config = json_data['configuration']['solana']
 
-            if solana_config:
-                
-                print("Solana configuration found in the trace file.")
-
-            else:
-               
-               print("No Solana configuration found in the trace file.")
-               
-            if solana_config :
-                # Save to execution_traces folder
-                traces_folder = f"{anchor_base_path}/execution_traces/"
-                os.makedirs(traces_folder, exist_ok=True)
-
-                file_path = os.path.join(traces_folder, uploaded_file.name)
-
-                # Save the file
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(json_data, f, indent=2)
-
-                st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully!")
-                st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
-                
-        except json.JSONDecodeError:
-            st.error("❌ Invalid JSON file. Please upload a valid JSON trace file.")
-        except Exception as e:
-            st.error(f"❌ Error uploading file: {str(e)}")
 
 
 async def run_execution_trace(file_name):
@@ -193,9 +139,24 @@ async def run_execution_trace(file_name):
             
             for account in required_accounts:
                 # Process each required account
-                if not is_pda(complete_dict[account]):
+
+
+
+                                # If it is a PDA
+                if is_pda(complete_dict[account]):
                     
-                    wallet_value = complete_dict[account]
+                    try:
+                        pda_key = Pubkey.from_string(complete_dict[account])
+                        final_accounts[account] = pda_key
+                    except Exception as e:
+                        print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
+                        return
+
+
+                elif not is_wallet(complete_dict[account]):
+                    wallet_value = complete_dict[complete_dict[account]]
+
+                    print(f"Account {account} is a wallet with value {wallet_value}")
                     file_path = f"{solana_base_path}/solana_wallets/{wallet_value}"
 
                     keypair = load_keypair_from_file(file_path)
@@ -207,18 +168,25 @@ async def run_execution_trace(file_name):
                     final_accounts[account] = keypair.pubkey()
 
 
-                # If it is a PDA
-                elif is_pda(complete_dict[account]):
+
+
+                elif not is_pda(complete_dict[account]) and is_wallet(complete_dict[account]):
                     
-                    try:
-                        pda_key = Pubkey.from_string(complete_dict[account])
-                        final_accounts[account] = pda_key
-                    except Exception as e:
-                        print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
+                    wallet_value = complete_dict[account]
+
+                    print(f"Account {account} is a wallet with value {wallet_value}")
+                    file_path = f"{solana_base_path}/solana_wallets/{wallet_value}"
+
+                    keypair = load_keypair_from_file(file_path)
+                    if keypair is None:
+                        print(f"Wallet for account {account} not found at path {file_path}.")
                         return
-                else:
-                    print("work on errors")
-                    return
+                    if account in signer_accounts:
+                        signer_accounts_keypairs[account] = keypair
+                    final_accounts[account] = keypair.pubkey()
+
+
+
                 
 
             # Manage args
@@ -329,12 +297,13 @@ async def run_execution_trace(file_name):
                 else:
                     transaction_hash = "program is not deployed"
 
-            json_action = {"sequence_id" : trace_id ,
+            json_action = { "execution_time_in_slots": elapsed_slots,
+                            "sequence_id" : trace_id ,
                             "function_name": instruction ,
                             "transaction_size_bytes": size,
                             "transaction_fees_lamports": fees,
-                            "transaction_hash": f"{transaction_hash}",
-                            "execution_time_in_slots": elapsed_slots
+                            "transaction_hash": f"{transaction_hash}"
+                            
                         }
 
             # Append results
@@ -480,21 +449,22 @@ def build_table(data):
     
     # --- Azioni in formato verticale ---
     st.markdown("### ⚙️ Actions")
-    
-    action = actions[0]  # Se c'è una sola azione, la prendiamo direttamente
-    st.markdown('<div class="vertical-table">', unsafe_allow_html=True)
-    for key, value in action.items():
-        st.markdown(
-            f"""
-            <div class="vertical-table-row">
-                <div class="vertical-table-label">{key.replace('_', ' ').title()}</div>
-                <div class="vertical-table-value">{value}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-    
+
+    for action in actions:
+   
+        st.markdown('<div class="vertical-table">', unsafe_allow_html=True)
+        for key, value in action.items():
+            st.markdown(
+                f"""
+                <div class="vertical-table-row">
+                    <div class="vertical-table-label">{key.replace('_', ' ').title()}</div>
+                    <div class="vertical-table-value">{value}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+
     # --- Pulsanti di Download ---
     st.markdown("### 💾 Download Results")
     
