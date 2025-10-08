@@ -45,7 +45,7 @@ def _remove_extension(filename: str) -> str:
 # VERSIONE HEADLESS: COMPILAZIONE E DEPLOY TUTTO JSON
 # =====================================================
 def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False, single_program=None):
-   
+
     results = []
     operating_system = platform.system()
     programs_path = os.path.join(anchor_base_path, "anchor_programs")
@@ -170,7 +170,7 @@ def _perform_anchor_initialization(program_name, operating_system):
 
 
 def _perform_anchor_build(program_name, program_code, operating_system):
-   
+
     root_env_dir = os.path.join(anchor_base_path, ".anchor_files", program_name, "anchor_environment")
     lib_path = os.path.join(root_env_dir, "programs", "anchor_environment", "src", "lib.rs")
 
@@ -185,11 +185,13 @@ def _perform_anchor_build(program_name, program_code, operating_system):
 
     commands = [
         f"cd {root_env_dir}",
-        "cargo update -p bytemuck_derive@1.10.1", #occhio cambia spesso
+        #pay attention to this, bytemuck_derive changes often , avoid a specific version if possible
+        "cargo update -p bytemuck_derive", #occhio cambia spesso
         "anchor build"
     ]
     concatenated = " && ".join(commands)
     result = run_command(operating_system, concatenated)
+   
 
     # errore -Znext
     if result and hasattr(result, 'stderr') and result.stderr and '-Znext' in result.stderr:

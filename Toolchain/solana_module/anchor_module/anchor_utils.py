@@ -1,4 +1,4 @@
-# MIT License
+ # MIT License
 #
 # Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
 #
@@ -19,7 +19,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+import pandas as pd
 import streamlit as st
 import os
 import json
@@ -510,3 +510,42 @@ def _manage_seed_insertion(program_name, n_seeds):
     pda_key = Pubkey.find_program_address(seeds, program_id)[0]
     print(f'Generated key is: {pda_key}')
     return pda_key, False
+
+
+def upload_anchor_program():
+    """UI component for uploading Solana program (.rs) files via drag & drop."""
+
+    st.subheader("📦 Upload Solana Program")
+
+    uploaded_file = st.file_uploader(
+        "Drag and drop your Solana program file (.rs) here",
+        type=['rs'],
+        help="Upload a Rust source file for your Solana program"
+    )
+
+    if uploaded_file is not None:
+        try:
+            # Legge il contenuto del file
+            file_content = uploaded_file.read().decode("utf-8")
+
+            # Facoltativo: controlla se sembra un file Rust di Anchor
+            if not re.search(r"declare_id!\(", file_content):
+                st.warning("⚠️ Il file non contiene una dichiarazione `declare_id!()`. Verifica che sia un programma Anchor valido.")
+
+            # Percorso base per i programmi Anchor
+            programs_folder = os.path.join(anchor_base_path, "anchor_programs")
+            os.makedirs(programs_folder, exist_ok=True)
+
+            file_path = os.path.join(programs_folder, uploaded_file.name)
+
+            # Salva il file nel percorso desiderato
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(file_content)
+
+            st.success(f"✅ Program `{uploaded_file.name}` uploaded successfully!")
+            st.info(f"📁 Saved to: `anchor_programs/{uploaded_file.name}`")
+
+        except UnicodeDecodeError:
+            st.error("❌ Errore di codifica. Assicurati che il file sia in formato testo UTF-8.")
+        except Exception as e:
+            st.error(f"❌ Error uploading file: {str(e)}")

@@ -336,7 +336,7 @@ def _perform_anchor_build(program_name, program, operating_system):
     # Define Anchor build commands to be executed
     build_commands = [
         f"cd {anchor_base_path}/.anchor_files/{program_name}/anchor_environment",  # Change directory to new anchor environment
-        "cargo update -p bytemuck_derive@1.9.3", # bytemyck_derive is now 1.9.2, but can change frequently
+        "cargo update -p bytemuck_derive", # bytemyck_derive is now 1.9.2, but can change frequently
         "anchor build"  # Build program
     ]
 

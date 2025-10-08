@@ -1,7 +1,9 @@
 import streamlit as st
+import pandas as pd
+import json
+from io import StringIO
 import os
 import re
-import json
 import asyncio
 from solders.pubkey import Pubkey
 from anchorpy import Wallet, Provider
@@ -11,7 +13,7 @@ from Toolchain.solana_module.solana_utils import load_keypair_from_file, solana_
 from Toolchain.solana_module.anchor_module.anchor_utils import anchor_base_path, fetch_initialized_programs, \
     fetch_program_instructions, fetch_required_accounts, fetch_signer_accounts, fetch_args, check_type, convert_type, \
     fetch_cluster, load_idl, check_if_array , check_if_vec , bind_actors , is_pda  , generate_pda_automatically , find_sol_arg , \
-    get_network_from_client , find_args
+    get_network_from_client , find_args ,is_wallet
 
 from spl.token.async_client import AsyncToken
 from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
@@ -21,48 +23,7 @@ from solana.rpc.async_api import AsyncClient
 # ====================================================
 # PUBLIC FUNCTIONS
 # ====================================================
-def upload_trace_file():
-    """UI component for uploading execution trace files via drag & drop."""
-    
-    st.subheader("📤 Upload Execution Trace")
-    
-    uploaded_file = st.file_uploader(
-        "Drag and drop your execution trace JSON file here",
-        type=['json'],
-        help="Upload a JSON file containing the execution trace"
-    )
-    
-    if uploaded_file is not None:
-        try:
-            # Read and validate JSON
-            file_content = uploaded_file.read()
-            json_data = json.loads(file_content)
-            
-            # Validate required fields
-            required_fields = ["trace_title", "trace_execution"]
-            missing_fields = [field for field in required_fields if field not in json_data]
-            
-            if missing_fields:
-                st.error(f"❌ Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
-                return
-            
-            # Save to execution_traces folder
-            traces_folder = f"{anchor_base_path}/execution_traces/"
-            os.makedirs(traces_folder, exist_ok=True)
-            
-            file_path = os.path.join(traces_folder, uploaded_file.name)
-            
-            # Save the file
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(json_data, f, indent=2)
-            
-            st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully!")
-            st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
-                
-        except json.JSONDecodeError:
-            st.error("❌ Invalid JSON file. Please upload a valid JSON trace file.")
-        except Exception as e:
-            st.error(f"❌ Error uploading file: {str(e)}")
+
 
 
 async def run_execution_trace(file_name):
@@ -108,7 +69,7 @@ async def run_execution_trace(file_name):
 
             args = find_args(trace)
 
-            st.info(f"Processing execution trace with ID {trace['sequence_id']} with args {args}...") 
+            st.info(f"Processing execution trace with ID {trace['sequence_id']}.") 
             sol_args = find_sol_arg(trace)
 
             
@@ -178,9 +139,24 @@ async def run_execution_trace(file_name):
             
             for account in required_accounts:
                 # Process each required account
-                if not is_pda(complete_dict[account]):
+
+
+
+                                # If it is a PDA
+                if is_pda(complete_dict[account]):
                     
-                    wallet_value = complete_dict[account]
+                    try:
+                        pda_key = Pubkey.from_string(complete_dict[account])
+                        final_accounts[account] = pda_key
+                    except Exception as e:
+                        print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
+                        return
+
+
+                elif not is_wallet(complete_dict[account]):
+                    wallet_value = complete_dict[complete_dict[account]]
+
+                    print(f"Account {account} is a wallet with value {wallet_value}")
                     file_path = f"{solana_base_path}/solana_wallets/{wallet_value}"
 
                     keypair = load_keypair_from_file(file_path)
@@ -192,28 +168,25 @@ async def run_execution_trace(file_name):
                     final_accounts[account] = keypair.pubkey()
 
 
-                # If it is a PDA
-                elif is_pda(complete_dict[account]):
+
+
+                elif not is_pda(complete_dict[account]) and is_wallet(complete_dict[account]):
                     
-                    try:
-                        pda_key = Pubkey.from_string(complete_dict[account])
-                        final_accounts[account] = pda_key
-                    except Exception as e:
-                        print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
+                    wallet_value = complete_dict[account]
+
+                    print(f"Account {account} is a wallet with value {wallet_value}")
+                    file_path = f"{solana_base_path}/solana_wallets/{wallet_value}"
+
+                    keypair = load_keypair_from_file(file_path)
+                    if keypair is None:
+                        print(f"Wallet for account {account} not found at path {file_path}.")
                         return
-                # If it is a Token Account (manual input)
-                #elif execution_trace[i].startswith("T:"):
-                #    extracted_key = execution_trace[i].removeprefix('T:')
-                #    try:
-                #        token_account_key = Pubkey.from_string(extracted_key)
-                #        final_accounts[account] = token_account_key
-                #        print(f"Token account {account} added with address: {token_account_key}")
-                #    except Exception as e:
-                #        print(f"Invalid token account key format for account {account}: {extracted_key}. Error: {e}")
-                #        return
-                else:
-                    print("work on errors")
-                    return
+                    if account in signer_accounts:
+                        signer_accounts_keypairs[account] = keypair
+                    final_accounts[account] = keypair.pubkey()
+
+
+
                 
 
             # Manage args
@@ -324,12 +297,13 @@ async def run_execution_trace(file_name):
                 else:
                     transaction_hash = "program is not deployed"
 
-            json_action = {"sequence_id" : trace_id ,
+            json_action = { "execution_time_in_slots": elapsed_slots,
+                            "sequence_id" : trace_id ,
                             "function_name": instruction ,
                             "transaction_size_bytes": size,
                             "transaction_fees_lamports": fees,
-                            "transaction_hash": f"{transaction_hash}",
-                            "execution_time_in_slots": elapsed_slots
+                            "transaction_hash": f"{transaction_hash}"
+                            
                         }
 
             # Append results
@@ -340,10 +314,11 @@ async def run_execution_trace(file_name):
 
     # Write results
     file_name_without_extension = file_name.removesuffix(".json")
-    file_path = _write_json(file_name_without_extension, results, network)
+    file_path,final = _write_json(file_name_without_extension, results, network)
     
     # Replace initial message with completion message
     status_placeholder.success(f"✅ Execution completed successfully! Results saved to: `{os.path.basename(file_path)}`")
+    return {"success": True, "results_file": final}
 
 
 # ====================================================
@@ -396,4 +371,143 @@ def _write_json(file_name, results , network):
     with open(json_file, "w") as f:
         json.dump(final, f, indent=2)
     
-    return json_file
+    return json_file ,final
+
+
+
+
+
+def build_table(data):
+    results = data["results_file"]
+    actions = results["actions"]
+    
+    # --- Stile personalizzato ---
+    st.markdown("""
+    <style>
+        /* Titoli principali */
+        h3 {
+            font-size: 2rem !important;
+        }
+
+        /* Titoli delle metriche */
+        .info-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #cccccc;
+            margin-bottom: 0.3rem;
+        }
+
+        /* Valori delle metriche (Network, Platform, Trace title) */
+        .info-value {
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: #ffffff;
+            margin-bottom: 0.8rem;
+        }
+
+        /* Tabella verticale */
+        .vertical-table {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        .vertical-table-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 0;
+        }
+        .vertical-table-label {
+            color: #aaa;
+            font-weight: 600;
+        }
+        .vertical-table-value {
+            color: #fff;
+            word-break: break-all;
+            text-align: right;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # --- Info generali (su una riga) ---
+    st.markdown("### 📋 Generic Info")
+    cols = st.columns(3)
+
+    with cols[0]:
+        st.markdown("<div class='info-title'>Network</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['network']}</div>", unsafe_allow_html=True)
+
+    with cols[1]:
+        st.markdown("<div class='info-title'>Platform</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['platform']}</div>", unsafe_allow_html=True)
+
+    with cols[2]:
+        st.markdown("<div class='info-title'>Trace Title</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-value'>{results['trace_title']}</div>", unsafe_allow_html=True)
+    
+    # --- Azioni in formato verticale ---
+    st.markdown("### ⚙️ Actions")
+
+    for action in actions:
+   
+        st.markdown('<div class="vertical-table">', unsafe_allow_html=True)
+        for key, value in action.items():
+            st.markdown(
+                f"""
+                <div class="vertical-table-row">
+                    <div class="vertical-table-label">{key.replace('_', ' ').title()}</div>
+                    <div class="vertical-table-value">{value}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Pulsanti di Download ---
+    st.markdown("### 💾 Download Results")
+    
+    # Prepara i dati per il download
+    download_data = {
+        "network": results['network'],
+        "platform": results['platform'],
+        "trace_title": results['trace_title'],
+        "actions": actions
+    }
+    
+    # Converti in JSON
+    json_data = json.dumps(download_data, indent=2)
+    
+    # Prepara dati per CSV
+    csv_rows = []
+    for action in actions:
+        row = {
+            "Network": results['network'],
+            "Platform": results['platform'],
+            "Trace Title": results['trace_title']
+        }
+        row.update(action)
+        csv_rows.append(row)
+    
+    df = pd.DataFrame(csv_rows)
+    csv_data = df.to_csv(index=False)
+    
+    # Due colonne per i pulsanti di download
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            label="📥 Download as JSON",
+            data=json_data,
+            file_name=f"{results['trace_title']}_results.json",
+            mime="application/json"
+        )
+    
+    with col2:
+        st.download_button(
+            label="📊 Download as CSV",
+            data=csv_data,
+            file_name=f"{results['trace_title']}_results.csv",
+            mime="text/csv"
+        )

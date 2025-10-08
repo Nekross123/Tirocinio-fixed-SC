@@ -145,6 +145,28 @@ def close_anchor_program():
         else:
             print('Please insert a valid choice.')
 
+
+
+def close_anchor_program_dapp(chosen_program):
+
+
+    cluster, wallet_name = _fetch_cluster_and_wallet(chosen_program)
+    program_id = str(_get_program_id(chosen_program))
+
+    
+
+    result = perform_program_closure(program_id, cluster, wallet_name)
+
+    print("Result:", result)
+    if not result.stderr:
+        _remove_initialized_program(chosen_program)
+
+        return {"success": True}
+    
+    else:
+        
+        return {"success": False, "error": "Error during program closure: " + str(result.stderr)}
+
 def remove_anchor_program():
     chosen_program = choose_program()
     if not chosen_program:

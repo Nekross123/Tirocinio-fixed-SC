@@ -1,4 +1,30 @@
+from Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager import  fetch_initialized_programs , build_table
+from Rosetta_utils import upload_trace_file
+from flask import Flask, request, jsonify
 import streamlit as st
+import pandas as pd
+import os
+import sys
+import requests
+import json
+import asyncio
+sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
+
+# ==============================
+# Import moduli Solana
+# ==============================
+
+import Toolchain.solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
+from  Toolchain.solana_module.solana_utils import load_keypair_from_file, create_client
+import  Toolchain.solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+
+
+TRACES_PATH = os.path.join( "Toolchain","solana_module", "anchor_module", "execution_traces")
+
+
+
+
 
 # ==============================
 # Configurazione pagina
@@ -10,21 +36,42 @@ st.set_page_config(
 )
 
 # ==============================
-# Titolo e descrizione
+# Sidebar
 # ==============================
-st.title("🌹 Benvenuto in Rosetta Smart Contract")
+st.sidebar.header("Menu")
+selected_action = st.sidebar.radio(
+    "Choose an action:",
+    ("Home", "Upload a new trace")
+)
 
-st.markdown("""
-Questa applicazione ti permette di gestire facilmente le tue **toolchain per Smart Contract**.
 
-### Come iniziare:
-1. Sulla sinistra, nella **sidebar**, seleziona la toolchain desiderata:
-   - **Solana** per lavorare con smart contract Solana.
-   - **Tezos** per lavorare con smart contract Tezos.
-2. Ogni toolchain ha le proprie funzionalità:
 
-""")
+if selected_action == "Home":
+    # ==============================
+    # Titolo e descrizione
+    # ==============================
+    st.title("🌹 Welcome to Rosetta Smart Contract")
 
+    st.markdown("""
+   This application let you manage easily your **Smart Contract toolchains**.
+
+    ### Quick Start Guide:
+    1. On the left you have the **sidebar**, select the toolchain you want to use:
+       - **Solana** per lavorare con smart contract Solana.
+       - **Tezos** per lavorare con smart contract Tezos.
+    3. After deploying a program, you can use the **Automatic Data Insertion** feature to test it with predefined execution traces.
+        The results will be printe below after the execution.
+
+    """)
+
+
+
+
+                
+
+elif selected_action == "Upload a new trace":
+
+    upload_trace_file()
 # ==============================
 # Footer
 # ==============================
