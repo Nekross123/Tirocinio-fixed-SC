@@ -5,7 +5,9 @@
     "bidder"
   ],
   "configuration": {
-    "solana": {"use" : "True"},
+    "solana": {
+      "use": "True"
+    },
     "evm": {},
     "tezos": {},
     "cardano": {}
@@ -23,17 +25,19 @@
       "cardano": {},
       "evm": {},
       "solana": {
-        "auction_info": { "opt" : "s",
-                          "param" :["auctioned_object"]}
-                          ,
+        "auction_info": {
+          "opt": "s",
+          "param": [
+            "auctioned_object"
+          ]
+        },
         "auctioned_object": "asdvrer",
         "duration_slots": 150,
         "starting_bid": 1000,
         "provider_wallet": "seller",
         "send_transaction": true
       }
-    } ,
-
+    },
     {
       "sequence_id": "2",
       "function_name": "bid",
@@ -46,13 +50,16 @@
       "cardano": {},
       "evm": {},
       "solana": {
-        "auction_info": { "opt" : "s",
-                          "param" :["auctioned_object"]}
-                          ,
+        "auction_info": {
+          "opt": "s",
+          "param": [
+            "auctioned_object"
+          ]
+        },
         "auctioned_object": "asdvrer",
         "amount_to_deposit": 2000,
         "provider_wallet": "bidder",
-        "current_highest_bidder" : "seller",
+        "current_highest_bidder": "seller",
         "send_transaction": true
       }
     }
