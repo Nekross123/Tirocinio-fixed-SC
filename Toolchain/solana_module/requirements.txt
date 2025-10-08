@@ -4,6 +4,7 @@
 # Note: Please ensure that you have the correct versions of the packages installed to avoid compatibility issues.
 
 # You can use pip install -r requirements.txt to install all the required packages.
+
 # -------------------- BLOCKCHAIN --------------------
 # Solana & Anchor Framework
 anchorpy==0.18.0
