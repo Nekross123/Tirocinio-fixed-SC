@@ -253,36 +253,115 @@ elif selected_action == "Compile & Deploy":
                 st.error(f"Backend connection error: {e}")
                 st.stop()
 
-            if deploy_res["success"]:
-                if compile_mode == "Single program":
-                    program_id = deploy_res['programs'][0]['program_id'] if deploy_res['programs'] else "N/A"
-                    status_placeholder.success(f"🎉 Deployment completed! Program ID: {program_id}")
+            # Check if all operations were successful
+            all_successful = True
+            has_errors = False
+            
+            if compile_mode == "Single program":
+                if deploy_res['programs']:
+                    prog = deploy_res['programs'][0]
+                    all_successful = prog.get('anchorpy_initialized', False) and prog.get('compiled', False) and prog.get('deployed', False)
+                    if prog.get('errors'):
+                        has_errors = True
+                        st.subheader("❌ Errors encountered:")
+                        for error in prog['errors']:
+                            st.error(f"🔴 {error.strip()}")
+                    
+                    if deploy_res["success"] and prog.get('deployed', False):
+                        program_id = prog.get('program_id', 'N/A')
+                        status_placeholder.success(f"🎉 Deployment completed! Program ID: {program_id}")
+                    elif deploy_res["success"] and prog.get('compiled', False) and not prog.get('deployed', False):
+                        status_placeholder.warning(f"⚠️ Compilation succeeded but deployment failed")
+                    elif not deploy_res["success"]:
+                        status_placeholder.error(f"❌ Operation failed")
                 else:
-                    deployed_count = len([p for p in deploy_res["programs"] if p["deployed"]])
-                    status_placeholder.success(f"🎉 Deployment completed: {deployed_count}/{len(deploy_res['programs'])} programs!")
+                    all_successful = False
+                    status_placeholder.error("❌ No program data returned")
+            else:
+                # Multiple programs mode
+                successful_programs = []
+                failed_programs = []
+                
+                for prog in deploy_res.get("programs", []):
+                    prog_all_success = prog.get('anchorpy_initialized', False) and prog.get('compiled', False) and prog.get('deployed', False)
+                    
+                    if prog.get('errors'):
+                        has_errors = True
+                        failed_programs.append(prog)
+                    
+                    if prog_all_success:
+                        successful_programs.append(prog)
+                    else:
+                        failed_programs.append(prog)
+                        all_successful = False
+                
+                # Show errors if any
+                if has_errors:
+                    st.subheader("❌ Errors encountered:")
+                    for prog in failed_programs:
+                        if prog.get('errors'):
+                            st.error(f"🔴 **{prog['program']}**: {'; '.join(prog['errors'])}")
+                
+                # Show deployment results
+                if deploy_res["success"]:
+                    deployed_count = len([p for p in deploy_res["programs"] if p.get("deployed", False)])
+                    total_count = len(deploy_res["programs"])
+                    
+                    if deployed_count == total_count:
+                        status_placeholder.success(f"🎉 All programs deployed successfully: {deployed_count}/{total_count}")
+                    elif deployed_count > 0:
+                        status_placeholder.warning(f"⚠️ Partial success: {deployed_count}/{total_count} programs deployed")
+                    else:
+                        status_placeholder.error(f"❌ No programs deployed successfully")
                     
                     # Show Program IDs of all deployed programs
                     if deployed_count > 0:
-                        st.subheader("📋 Deployed programs:")
+                        st.subheader("📋 Successfully deployed programs:")
                         for prog in deploy_res["programs"]:
-                            if prog["deployed"] and prog["program_id"]:
+                            if prog.get("deployed", False) and prog.get("program_id"):
                                 st.success(f"✅ `{prog['program']}`: {prog['program_id']}")
-            else:
-                if compile_mode == "Single program":
-                    errors = deploy_res['programs'][0].get('errors', []) if deploy_res['programs'] else ["Unknown error"]
-                    status_placeholder.error(f"❌ Deployment failed: {'; '.join(errors)}")
                 else:
-                    failed_programs = [p for p in deploy_res["programs"] if not p["deployed"]]
-                    status_placeholder.error(f"❌ Deployment failed for {len(failed_programs)} programs")
-                    for prog in failed_programs:
-                        st.error(f"❌ `{prog['program']}`: {'; '.join(prog.get('errors', ['Unknown error']))}")
+                    all_successful = False
+                    status_placeholder.error(f"❌ Operation failed")
             
             print("Compile & deploy JSON details:", json.dumps(deploy_res, indent=2))
 
         progress_bar.progress(100)
         status_placeholder.empty()
         progress_bar.empty()
-        st.success("✅ Operation completed successfully!")
+        
+        # Only show success if all operations completed successfully and no errors
+        if deploy_flag:
+            if all_successful and not has_errors:
+                st.success("✅ Operation completed successfully!")
+            elif has_errors:
+                st.error("❌ Operation completed with errors")
+            else:
+                st.warning("⚠️ Operation completed with some failures")
+        else:
+            # Only compilation was requested
+            compile_successful = True
+            compile_has_errors = False
+            
+            if compile_mode == "Single program":
+                if compile_res.get('programs'):
+                    prog = compile_res['programs'][0]
+                    compile_successful = prog.get('compiled', False)
+                    if prog.get('errors'):
+                        compile_has_errors = True
+            else:
+                for prog in compile_res.get("programs", []):
+                    if not prog.get('compiled', False) or prog.get('errors'):
+                        compile_successful = False
+                    if prog.get('errors'):
+                        compile_has_errors = True
+            
+            if compile_successful and not compile_has_errors:
+                st.success("✅ Compilation completed successfully!")
+            elif compile_has_errors:
+                st.error("❌ Compilation completed with errors")
+            else:
+                st.warning("⚠️ Compilation completed with some failures")
 
 
 elif selected_action == "Automatic Data Insertion":

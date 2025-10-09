@@ -21,6 +21,12 @@
 # THE SOFTWARE.
 
 
+import os
+import sys
+
+# Aggiungi la directory parent al Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from solana_module.solana_user_interface import choose_action
 # ADD HERE NEW MODULES REQUIRED IMPORTS (STARTING FROM THE PROJECT ROOT)
 
