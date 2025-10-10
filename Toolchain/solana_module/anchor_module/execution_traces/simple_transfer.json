@@ -1,0 +1,74 @@
+{
+  "trace_title": "simple_transfer",
+  "trace_actors": [
+    "recipient",
+    "sender",
+    "rent"
+  ],
+  "configuration": {
+    "solana": {
+      "use": "True"
+    },
+    "evm": {
+      "use": "True"
+    },
+    "tezos": {
+      "use": "True"
+    },
+    "cardano": {}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "deposit",
+      "waiting_time": 0,
+      "actors": [
+        "recipient",
+        "sender"
+      ],
+      "args": {
+        "amount_to_deposit": 100000
+      },
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "balance_holder_pda": {
+          "opt": "s",
+          "param": [
+            "recipient",
+            "sender"
+          ]
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "withdraw",
+      "waiting_time": 0,
+      "actors": [
+        "recipient",
+        "sender"
+      ],
+      "args": {
+        "amount_to_withdraw": 5000
+      },
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "balance_holder_pda": {
+          "opt": "s",
+          "param": [
+            "recipient",
+            "sender"
+          ]
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      }
+    }
+  ]
+}

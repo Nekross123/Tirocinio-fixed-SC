@@ -1,8 +1,7 @@
 {
-  "trace_title": "auction",
+  "trace_title": "storage",
   "trace_actors": [
-    "seller",
-    "bidder"
+    "user"
   ],
   "configuration": {
     "solana": {
@@ -18,71 +17,79 @@
       "function_name": "initialize",
       "waiting_time": 0,
       "actors": [
-        "seller"
+        "user"
       ],
       "args": {},
       "tezos": {},
       "cardano": {},
       "evm": {},
       "solana": {
-        "auction_info": {
+        "string_storage_pda": {
           "opt": "s",
           "param": [
-            "auctioned_object"
+            "storage_string",
+            "user"
           ]
         },
-        "auctioned_object": "monitor",
-        "duration_slots": 50,
-        "starting_bid": 1000,
-        "provider_wallet": "seller",
+        "bytes_storage_dpa": {
+          "opt": "s",
+          "param": [
+            "storage_bytes",
+            "user"
+          ]
+        },
+        "provider_wallet": "user",
         "send_transaction": true
       }
     },
     {
       "sequence_id": "2",
-      "function_name": "start",
+      "function_name": "store_string",
       "waiting_time": 0,
       "actors": [
-        "seller"
+        "user"
       ],
-      "args": {},
+      "args": {
+        "data_to_store": "m"
+      },
       "tezos": {},
       "cardano": {},
       "evm": {},
       "solana": {
-        "auction_info": {
+        "string_storage_pda": {
           "opt": "s",
           "param": [
-            "auctioned_object"
+            "storage_string",
+            "user"
           ]
         },
-        "auctioned_object": "monitor",
-        "provider_wallet": "seller",
+        "provider_wallet": "user",
         "send_transaction": true
       }
     },
     {
       "sequence_id": "3",
-      "function_name": "bid",
+      "function_name": "store_bytes",
       "waiting_time": 0,
       "actors": [
-        "bidder"
+        "user"
       ],
-      "args": {},
+      "args": {
+        "data_to_store": "111"
+      },
       "tezos": {},
       "cardano": {},
       "evm": {},
       "solana": {
-        "auction_info": {
+        "bytes_storage_dpa": {
           "opt": "s",
           "param": [
-            "auctioned_object"
+            "storage_bytes",
+            "user"
           ]
         },
-        "auctioned_object": "monitor",
-        "amount_to_deposit": 2000,
-        "provider_wallet": "bidder",
-        "current_highest_bidder": "seller",
+        "provider_wallet": "user",
+        "data_to_store": "111",
         "send_transaction": true
       }
     }

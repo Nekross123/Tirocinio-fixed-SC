@@ -4,6 +4,8 @@ import sys
 import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
+
+# Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
 from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
 from solana_module.solana_utils import load_keypair_from_file, create_client
@@ -19,6 +21,22 @@ from solana_module.anchor_module.interactive_data_insertion_dapp import (
     build_and_optionally_send_transaction,
     _run_async,
 )
+
+# Ethereum imports
+try:
+    from ethereum_module.ethereum_utils import get_wallet_balance as get_eth_wallet_balance, get_wallet_address
+    from ethereum_module.hardhat_module.compiler_and_deployer import compile_and_deploy_contracts
+    from ethereum_module.hardhat_module.contract_utils import (
+        fetch_deployed_contracts,
+        load_abi_for_contract,
+        fetch_functions_for_contract,
+        fetch_contract_context,
+        interact_with_contract
+    )
+    ETHEREUM_ENABLED = True
+except ImportError as e:
+    print(f"Ethereum modules not available: {e}")
+    ETHEREUM_ENABLED = False
 
 app = Flask(__name__)
 
@@ -41,18 +59,18 @@ def get_wallet_pubkey(wallet_file):
     return str(keypair.pubkey())
 
 # ==============================
-# ROUTE Saldo Wallet
+# ROUTE Wallet Balance
 # ==============================
 @app.route("/wallet_balance", methods=["POST"])
 def wallet_balance():
     wallet_file = request.json.get("wallet_file")
     if not wallet_file:
-        return jsonify({"error": "Nessun wallet selezionato"}), 400
+        return jsonify({"error": "No wallet selected"}), 400
 
     balance = _run_async(get_wallet_balance(wallet_file))
     pubkey = get_wallet_pubkey(wallet_file)
     if balance is None:
-        return jsonify({"error": "Errore nel leggere il wallet"}), 500
+        return jsonify({"error": "Error reading wallet"}), 500
     return jsonify({"balance": balance, "pubkey": pubkey})
 
 # ==============================
@@ -87,8 +105,8 @@ def automatic_data_insertion():
     trace_file_path = os.path.join(traces_path, selected_trace_file) if selected_trace_file else None
 
     if not selected_trace_file or not os.path.isfile(trace_file_path):
-        print("Trace file non trovato:", trace_file_path)
-        return jsonify({"success": False, "error": "Trace file non trovato"}), 400
+        print("Trace file not found:", trace_file_path)
+        return jsonify({"success": False, "error": "Trace file not found"}), 400
 
     try:
         result = asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
@@ -119,7 +137,7 @@ def interactive_transaction():
         if not program or not instruction or not provider_wallet:
             return jsonify({
                 "success": False,
-                "error": "Parametri mancanti: progit gram, instruction, provider_wallet sono richiesti"
+                "error": "Missing parameters: program, instruction, provider_wallet are required"
             }), 400
         
         # Fetch context
@@ -157,7 +175,7 @@ def interactive_transaction():
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": f"Errore interno: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"Internal server error: {str(e)}"}), 500
 
 # ==============================
 # ROUTE Get Programs
@@ -224,16 +242,170 @@ def close_program():
 
     # Controlla che sia una cartella valida
     if not selected_program or not os.path.exists(program_dir) or not os.path.isdir(program_dir):
-        print("Cartella del programma non trovata:", program_dir)
-        return jsonify({"success": False, "error": "Cartella del programma non trovata"}), 400
+        print("Program folder not found:", program_dir)
+        return jsonify({"success": False, "error": "Program folder not found"}), 400
 
     try:
         result = close_anchor_program_dapp(selected_program)
         return result
     except Exception as e:
         import traceback
-        print("Errore in close_program:", traceback.format_exc())
+        print("Error in close_program:", traceback.format_exc())
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ==============================
+# ETHEREUM ROUTES
+# ==============================
+
+ETH_WALLETS_PATH = os.path.join("Toolchain", "ethereum_module", "ethereum_wallets")
+
+@app.route("/eth_wallet_balance", methods=["POST"])
+def eth_wallet_balance():
+    """Get Ethereum wallet balance and address."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    wallet_file = request.json.get("wallet_file")
+    if not wallet_file:
+        return jsonify({"error": "No wallet selected"}), 400
+
+    try:
+        wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
+        print(f"DEBUG: Wallet path: {wallet_path}")
+        print(f"DEBUG: File exists: {os.path.exists(wallet_path)}")
+        
+        balance = get_eth_wallet_balance(wallet_path, "localhost")
+        print(f"DEBUG: Balance: {balance}")
+        
+        address = get_wallet_address(wallet_path)
+        print(f"DEBUG: Address: {address}")
+        
+        if balance is None or address is None:
+            return jsonify({"error": f"Error reading wallet - Balance: {balance}, Address: {address}"}), 500
+            
+        return jsonify({"balance": balance, "address": address})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/eth_compile_deploy", methods=["POST"])
+def eth_compile_deploy():
+    """Compile and deploy Ethereum contracts."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    wallet_file = request.json.get("wallet_file")
+    deploy_flag = request.json.get("deploy", True)
+    network = request.json.get("network", "localhost")
+    single_contract = request.json.get("single_contract", None)
+    
+    try:
+        result = compile_and_deploy_contracts(
+            wallet_name=wallet_file,
+            network=network,
+            deploy=deploy_flag,
+            single_contract=single_contract
+        )
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/eth_get_contracts", methods=["GET"])
+def eth_get_contracts():
+    """Get list of deployed Ethereum contracts."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    try:
+        contracts = fetch_deployed_contracts()
+        return jsonify({"success": True, "contracts": contracts})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/eth_get_functions", methods=["POST"])
+def eth_get_functions():
+    """Get functions for a specific contract."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    try:
+        contract = request.json.get("contract")
+        if not contract:
+            return jsonify({"success": False, "error": "Contract name required"}), 400
+        
+        functions = fetch_functions_for_contract(contract)
+        return jsonify({"success": True, "functions": functions})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/eth_get_contract_context", methods=["POST"])
+def eth_get_contract_context():
+    """Get contract function context."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    try:
+        contract = request.json.get("contract")
+        function_name = request.json.get("function_name")
+        
+        if not contract or not function_name:
+            return jsonify({"success": False, "error": "Contract and function name required"}), 400
+        
+        ctx = fetch_contract_context(contract, function_name)
+        return jsonify({"success": True, "context": ctx})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/eth_interact_contract", methods=["POST"])
+def eth_interact_contract():
+    """Interact with a deployed contract function."""
+    if not ETHEREUM_ENABLED:
+        return jsonify({"error": "Ethereum modules not available"}), 500
+        
+    try:
+        data = request.json
+        
+        contract = data.get("contract")
+        function_name = data.get("function_name")
+        param_values = data.get("param_values", {})
+        address_inputs = data.get("address_inputs", [])
+        value_eth = data.get("value_eth", "0")
+        caller_wallet = data.get("caller_wallet")
+        gas_limit = data.get("gas_limit", "300000")
+        gas_price = data.get("gas_price", "20")
+        is_view = data.get("is_view", False)
+        
+        # Validate required fields
+        if not contract or not function_name or not caller_wallet:
+            return jsonify({
+                "success": False,
+                "error": "Contract, function_name, and caller_wallet are required"
+            }), 400
+        
+        # Interact with contract
+        result = interact_with_contract(
+            contract_deployment_id=contract,
+            function_name=function_name,
+            param_values=param_values,
+            address_inputs=address_inputs,
+            value_eth=value_eth,
+            caller_wallet=caller_wallet,
+            gas_limit=gas_limit,
+            gas_price=gas_price,
+            network="localhost"  # Default network for now
+        )
+        
+        if result["success"]:
+            return jsonify({"success": True, "result": result})
+        else:
+            return jsonify({"success": False, "error": result["error"]}), 400
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Internal error: {str(e)}"}), 500
 
 
 if __name__ == "__main__":

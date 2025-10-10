@@ -38,40 +38,22 @@ st.set_page_config(
 # ==============================
 # Sidebar
 # ==============================
-st.sidebar.header("Menu")
-selected_action = st.sidebar.radio(
-    "Choose an action:",
-    ("Home", "Upload a new trace")
-)
 
 
-
-if selected_action == "Home":
-    # ==============================
-    # Titolo e descrizione
-    # ==============================
-    st.title("🌹 Welcome to Rosetta Smart Contract")
-
-    st.markdown("""
-   This application let you manage easily your **Smart Contract toolchains**.
-
-    ### Quick Start Guide:
-    1. On the left you have the **sidebar**, select the toolchain you want to use:
-       - **Solana** per lavorare con smart contract Solana.
-       - **Tezos** per lavorare con smart contract Tezos.
-    3. After deploying a program, you can use the **Automatic Data Insertion** feature to test it with predefined execution traces.
-        The results will be printe below after the execution.
-
-    """)
-
-
-
-
-                
-
-elif selected_action == "Upload a new trace":
-
-    upload_trace_file()
+# ==============================
+# Titolo e descrizione
+# ==============================s
+st.title("🌹 Welcome to Rosetta Smart Contract")
+st.markdown("""
+This application let you manage easily your **Smart Contract toolchains**.
+### Quick Start Guide:
+1. On the left you have the **sidebar**, select the toolchain you want to use:
+   - **Solana** per lavorare con smart contract Solana.
+   - **Tezos** per lavorare con smart contract Tezos.
+3. After deploying a program, you can use the **Automatic Data Insertion** feature , which is present in each toolchain, to test it with predefined execution traces.
+    The results will be printe below after the execution.
+""")
+upload_trace_file()
 # ==============================
 # Footer
 # ==============================

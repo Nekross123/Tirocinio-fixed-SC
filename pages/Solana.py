@@ -12,7 +12,6 @@ sys.path.append(toolchain_path)
 # Import Solana modules
 # ==============================
 from solana_module.anchor_module.dapp_automatic_insertion_manager import  fetch_initialized_programs , build_table
-import solana_module.anchor_module.anchor_utils as anchor_utils
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
 from  solana_module.solana_utils import load_keypair_from_file, create_client, solana_base_path
 import  solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
@@ -133,8 +132,35 @@ if selected_action == "Manage Wallets":
         except requests.exceptions.RequestException as e:
             st.error(f"Backend connection error: {e}")
 
-if selected_action == "Upload new program":
-        anchor_utils.upload_anchor_program()
+elif selected_action == "Upload new program":
+    st.subheader("Upload Rust Program")
+    
+    uploaded_file = st.file_uploader(
+        "Choose a Rust file (.rs)", 
+        type="rs",
+        help="Upload a .rs file containing your Anchor program code"
+    )
+    
+    if uploaded_file is not None:
+        program_content = uploaded_file.read().decode('utf-8')
+        program_name = uploaded_file.name
+        
+        try:
+            # Ensure anchor_programs directory exists
+            os.makedirs(ANCHOR_PROGRAMS_PATH, exist_ok=True)
+            
+            # Save the program file
+            program_path = os.path.join(ANCHOR_PROGRAMS_PATH, program_name)
+            with open(program_path, 'w', encoding='utf-8') as f:
+                f.write(program_content)
+            
+            st.success(f"✅ Program uploaded successfully!")
+            st.info(f"📁 **File name**: {program_name}")
+            st.info(f"📂 **Saved to**: `{program_path}`")
+            st.info(f"🔧 You can now compile and deploy this program in the 'Compile & Deploy' section.")
+            
+        except Exception as e:
+            st.error(f"❌ Error saving program: {e}")
 
 elif selected_action == "Compile & Deploy":
     

@@ -1,0 +1,1 @@
+# Hardhat Module for Ethereum smart contracts
