@@ -29,9 +29,41 @@ st.set_page_config(
 st.title("🏗️ Tezos Smart Contract Toolchain")
 st.caption("An interface to compile, deploy, and interact with Tezos smart contracts.")
 
+def get_deployed_contracts():
+    """Wrapper per getAddress con path corretto"""
+    try:
+        # Cambia temporaneamente la directory per la funzione getAddress
+        original_dir = os.getcwd()
+        toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+        os.chdir(toolchain_dir)
+        
+        contracts = getAddress()
+        os.chdir(original_dir)
+        return contracts
+    except Exception as e:
+        if 'original_dir' in locals():
+            os.chdir(original_dir)
+        raise e
+
+def get_available_wallets():
+    """Ottieni la lista dei wallet disponibili"""
+    try:
+        wallet_path = os.path.join(os.path.dirname(__file__), "..", "tezos_module", "tezos_wallets", "wallet.json")
+        with open(wallet_path, 'r', encoding='utf-8') as f:
+            wallets = json.load(f)
+        return list(wallets.keys())
+    except FileNotFoundError:
+        st.error("The wallet.json file was not found in tezos_wallets directory.")
+        return []
+    except Exception as e:
+        st.error(f"Error reading wallets: {e}")
+        return []
+
 def get_client(wallet_id):
     try:
-        with open("wallet.json", 'r', encoding='utf-8') as f:
+        # Cerca il wallet nella nuova directory tezos_module/tezos_wallets/
+        wallet_path = os.path.join(os.path.dirname(__file__), "..", "tezos_module", "tezos_wallets", "wallet.json")
+        with open(wallet_path, 'r', encoding='utf-8') as f:
             wallets = json.load(f)
         key = wallets.get(str(wallet_id))
         if not key:
@@ -45,43 +77,109 @@ def get_client(wallet_id):
         st.error(f"Error during client configuration: {e}")
         return None
 
-def compile_view(client):
+def compile_view():
     st.header("1. Compile SmartPy Contracts")
-    contracts = folderScan("../contracts")
-    contract_to_compile = st.selectbox("Select a contract to compile:", options=contracts, key="compile_select")
+    
+    # Selezione del wallet nella stessa pagina
+    available_wallets = get_available_wallets()
+    if not available_wallets:
+        st.error("No wallets found. Please create a wallet first.")
+        return
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        wallet_selection = st.selectbox("Select Wallet:", options=available_wallets, key="compile_wallet")
+    with col2:
+        # Path corretto alla directory contracts di tezos-contract-2.0
+        contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+        contracts = folderScan(contracts_path)
+        contract_to_compile = st.selectbox("Select Contract:", options=contracts, key="compile_select")
 
     if st.button("🚀 Compile"):
-        if contract_to_compile and client:
-            contract_path = f"../contracts/{contract_to_compile}/{contract_to_compile}.py"
-            with st.spinner(f"Compiling {contract_path}..."):
-                try:
-                    compileContract(contractPath=contract_path)
-                    st.success(f"Contract '{contract_to_compile}' compiled successfully!")
-                    st.info("The Michelson files have been generated in the contract's directory.")
-                except Exception as e:
-                    st.error(f"Error during compilation: {e}")
+        if contract_to_compile and wallet_selection:
+            client = get_client(wallet_selection)
+            if client:
+                # Cambia directory per la compilazione
+                original_dir = os.getcwd()
+                toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+                os.chdir(toolchain_dir)
+                
+                contract_path = f"../contracts/{contract_to_compile}/{contract_to_compile}.py"
+                with st.spinner(f"Compiling {contract_path}..."):
+                    try:
+                        compileContract(contractPath=contract_path)
+                        os.chdir(original_dir)
+                        st.success(f"Contract '{contract_to_compile}' compiled successfully!")
+                        st.info("The Michelson files have been generated in the contract's directory.")
+                    except Exception as e:
+                        os.chdir(original_dir)
+                        st.error(f"Error during compilation: {e}")
+            else:
+                st.error("Could not initialize client with selected wallet.")
 
-def deploy_view(client):
+def deploy_view():
     st.header("2. Deploy a Contract (Origination)")
-    contracts = folderScan("../contracts")
-    contract_to_deploy = st.selectbox("Select a contract to deploy:", options=contracts, key="deploy_select")
+    
+    # Selezione del wallet nella stessa pagina
+    available_wallets = get_available_wallets()
+    if not available_wallets:
+        st.error("No wallets found. Please create a wallet first.")
+        return
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        wallet_selection = st.selectbox("Select Wallet:", options=available_wallets, key="deploy_wallet")
+    with col2:
+        # Path corretto alla directory contracts di tezos-contract-2.0
+        contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+        contracts = folderScan(contracts_path)
+        contract_to_deploy = st.selectbox("Select Contract:", options=contracts, key="deploy_select")
 
     initial_balance = st.number_input("Initial balance (in tez):", min_value=0, value=1, step=1)
 
     if st.button("🌐 Deploy"):
-        if contract_to_deploy and client:
-            michelson_path_str = f"./{contract_to_deploy}/step_001_cont_0_contract.tz"
-            storage_path_str = f"./{contract_to_deploy}/step_001_cont_0_storage.tz"
+        if contract_to_deploy and wallet_selection:
+            client = get_client(wallet_selection)
+            if not client:
+                st.error("Could not initialize client with selected wallet.")
+                return
+            
+            # Usa path assoluti per i file Michelson
+            contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+            contract_folder = os.path.join(contracts_path, contract_to_deploy)
+            
+            # Debug: mostra tutti i file nella cartella del contratto
+            if os.path.exists(contract_folder):
+                files_in_folder = os.listdir(contract_folder)
+                st.info(f"📁 Files in contract folder: {files_in_folder}")
+            else:
+                st.error(f"Contract folder not found: {contract_folder}")
+                return
+            
+            # Try both naming conventions (new and legacy)
+            michelson_path = os.path.join(contract_folder, f"{contract_to_deploy}_code.tz")
+            storage_path = os.path.join(contract_folder, f"{contract_to_deploy}_storage.tz")
+            
+            # Fallback to legacy naming if new naming not found
+            if not os.path.exists(michelson_path):
+                michelson_path = os.path.join(contract_folder, "step_001_cont_0_contract.tz")
+            if not os.path.exists(storage_path):
+                storage_path = os.path.join(contract_folder, "step_001_cont_0_storage.tz")
 
-            if not Path(michelson_path_str).exists() or not Path(storage_path_str).exists():
-                st.error("Contract not compiled. Compile it before deploying.")
+            if not os.path.exists(michelson_path) or not os.path.exists(storage_path):
+                st.error(f"Contract not compiled. Compile it before deploying.")
+                st.info(f"Looking for:\n- {michelson_path}\n- {storage_path}")
                 return
 
-            michelson_code = Path(michelson_path_str).read_text()
-            storage_code = Path(storage_path_str).read_text()
+            michelson_code = Path(michelson_path).read_text()
+            storage_code = Path(storage_path).read_text()
 
             with st.spinner("Origination in progress... The operation may take a few minutes."):
                 try:
+                    # Cambia directory per addressUpdate
+                    original_dir = os.getcwd()
+                    toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+                    
                     op_result = origination(
                         client=client,
                         michelsonCode=michelson_code,
@@ -90,7 +188,12 @@ def deploy_view(client):
                     )
                     if op_result:
                         contract_info = contractInfoResult(op_result=op_result)
+                        
+                        # Cambia dir per addressUpdate che usa path relativo
+                        os.chdir(toolchain_dir)
                         addressUpdate(contract=contract_to_deploy, newAddress=contract_info["address"])
+                        os.chdir(original_dir)
+                        
                         st.success(f"Contract '{contract_to_deploy}' deployed successfully!")
                         st.write("New contract address:")
                         st.code(contract_info["address"], language="text")
@@ -99,22 +202,37 @@ def deploy_view(client):
                     else:
                         st.error("Origination failed. Check the console log for details.")
                 except Exception as e:
+                    if 'original_dir' in locals():
+                        os.chdir(original_dir)
                     st.error(f"Error during deployment: {e}")
 
-def interact_view(client):
+def interact_view():
     st.header("3. Interact with a Contract")
+    
+    # Selezione del wallet nella stessa pagina
+    available_wallets = get_available_wallets()
+    if not available_wallets:
+        st.error("No wallets found. Please create a wallet first.")
+        return
+    
+    wallet_selection = st.selectbox("Select Wallet:", options=available_wallets, key="interact_wallet")
+    
     try:
-        deployed_contracts = getAddress()
+        deployed_contracts = get_deployed_contracts()
         if not deployed_contracts:
             st.warning("No deployed contracts found in `addressList.json`.")
             return
-    except Exception:
-        st.error("`addressList.json` not found or corrupted.")
+    except Exception as e:
+        st.error(f"`addressList.json` not found or corrupted: {str(e)}")
         return
 
     contract_name = st.selectbox("Select a contract to interact with:", options=list(deployed_contracts.keys()))
 
-    if contract_name and client:
+    if contract_name and wallet_selection:
+        client = get_client(wallet_selection)
+        if not client:
+            st.error("Could not initialize client with selected wallet.")
+            return
         contract_address = deployed_contracts[contract_name]
         st.info(f"Contract address: `{contract_address}`")
 
@@ -188,25 +306,17 @@ def exportResult(opResult):
     jsonWriter(fileName=fileName+".json", opReport=opResult)
     st.success(f"Result of operation {opResult['entryPoint']} saved to file.")
 
-st.sidebar.header("🔧 Configuration")
-wallet_selection = st.sidebar.selectbox("Select an Account (from wallet.json):", options=["1", "2", "3"])
-
 st.sidebar.header("Features")
 operation = st.sidebar.radio(
     "Select an operation:",
     ("Compile", "Deploy", "Interact", "Execute Trace")
 )
 
-client = get_client(wallet_selection)
-
-if client or operation == "Execute Trace":
-    if operation == "Compile":
-        compile_view(client)
-    elif operation == "Deploy":
-        deploy_view(client)
-    elif operation == "Interact":
-        interact_view(client)
-    elif operation == "Execute Trace":
-        trace_view()
-else:
-    st.error("Cannot proceed without a valid Tezos client. Check the wallet selection and the `wallet.json` file.")
+if operation == "Compile":
+    compile_view()
+elif operation == "Deploy":
+    deploy_view()
+elif operation == "Interact":
+    interact_view()
+elif operation == "Execute Trace":
+    trace_view()

@@ -76,7 +76,7 @@ st.title("⚡ Ethereum Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Choose an action:",
-    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive Contract Interaction", "Other")
+    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive Contract Interaction")
 )
 
 WALLETS_PATH = os.path.join(toolchain_path, "ethereum_module", "ethereum_wallets")
@@ -555,9 +555,7 @@ elif selected_action == "Interactive Contract Interaction":
     except Exception as e:
         st.error(f"Error loading contracts: {e}")
 
-else:
-    st.subheader("Other features")
-    st.write("Placeholder section for future Ethereum DApp features.")
+
 
 # ==============================
 # Footer

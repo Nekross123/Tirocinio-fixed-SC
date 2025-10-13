@@ -37,7 +37,7 @@ from Toolchain.solana_module.anchor_module.anchor_utils import anchor_base_path
 from solders.message import MessageV0
 from solders.transaction import VersionedTransaction
 
-async def build_transaction(program_name, instruction, accounts, args, signer_account_keypairs, client, provider, remaining_accounts=None):
+async def build_transaction(program_name, instruction, accounts, args, signer_account_keypairs, client, provider):
     # Ottieni la funzione da anchorpy
     function = _import_function(program_name, instruction)
     ix = _prepare_function(accounts, args, function)

@@ -193,6 +193,8 @@ async def run_execution_trace(file_name):
             required_args = fetch_args(instruction, idl)
             final_args = dict()
             for arg in required_args:
+
+                print(f"Processing argument: {arg}")                                                                                                                                                                                                                                                                                                                                                                                                                                                
                 
                 # Manage arrays
                 array_type, array_length = check_if_array(arg)

@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import sys
 import asyncio
@@ -37,6 +39,21 @@ try:
 except ImportError as e:
     print(f"Ethereum modules not available: {e}")
     ETHEREUM_ENABLED = False
+
+# Tezos imports
+try:
+    from tezos_module.tezos_interface import (
+        compile_and_deploy_tezos_contracts,
+        fetch_tezos_contracts,
+        fetch_tezos_entrypoints,
+        fetch_tezos_contract_context,
+        interact_with_tezos_contract,
+        is_tezos_available
+    )
+    TEZOS_ENABLED = True
+except ImportError as e:
+    print(f"Tezos modules not available: {e}")
+    TEZOS_ENABLED = False
 
 app = Flask(__name__)
 
@@ -101,20 +118,45 @@ def compile_deploy():
 @app.route("/automatic_data_insertion", methods=["POST"])
 def automatic_data_insertion():
     selected_trace_file = request.json.get("trace_file")
-    traces_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", "execution_traces")
-    trace_file_path = os.path.join(traces_path, selected_trace_file) if selected_trace_file else None
-
-    if not selected_trace_file or not os.path.isfile(trace_file_path):
-        print("Trace file not found:", trace_file_path)
-        return jsonify({"success": False, "error": "Trace file not found"}), 400
-
-    try:
-        result = asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
-        return jsonify({"success": True, "result": result})
-    except Exception as e:
-        import traceback
-        print("Errore automatic_data_insertion:", traceback.format_exc())
-        return jsonify({"success": False, "error": str(e)}), 500
+    
+    # Determina il tipo di blockchain basato sull'estensione del file
+    if selected_trace_file.endswith('.json'):
+        # Solana traces (JSON)
+        traces_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", "execution_traces")
+        trace_file_path = os.path.join(traces_path, selected_trace_file)
+        
+        if not selected_trace_file or not os.path.isfile(trace_file_path):
+            print("Solana trace file not found:", trace_file_path)
+            return jsonify({"success": False, "error": "Solana trace file not found"}), 400
+        
+        try:
+            result = asyncio.run(trace_manager.run_execution_trace(selected_trace_file))
+            return jsonify({"success": True, "result": result})
+        except Exception as e:
+            import traceback
+            print("Errore Solana automatic_data_insertion:", traceback.format_exc())
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    elif selected_trace_file.endswith('.csv'):
+        # Tezos traces (CSV)
+        traces_path = os.path.join(os.path.dirname(__file__), "tezos-contract-2.0", "toolchain", "execution_traces")
+        trace_file_path = os.path.join(traces_path, selected_trace_file)
+        
+        if not selected_trace_file or not os.path.isfile(trace_file_path):
+            print("Tezos trace file not found:", trace_file_path)
+            return jsonify({"success": False, "error": "Tezos trace file not found"}), 400
+        
+        try:
+            # Qui dovresti chiamare il gestore di tracce Tezos
+            # Per ora ritorniamo un messaggio di successo
+            return jsonify({"success": True, "result": "Tezos trace execution not yet implemented"})
+        except Exception as e:
+            import traceback
+            print("Errore Tezos automatic_data_insertion:", traceback.format_exc())
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    else:
+        return jsonify({"success": False, "error": "Unsupported trace file format. Use .json for Solana or .csv for Tezos"}), 400
 
 # ==============================
 # ROUTE Interactive Data Insertion
@@ -275,7 +317,7 @@ def eth_wallet_balance():
         print(f"DEBUG: Wallet path: {wallet_path}")
         print(f"DEBUG: File exists: {os.path.exists(wallet_path)}")
         
-        balance = get_eth_wallet_balance(wallet_path, "localhost")
+        balance = get_eth_wallet_balance(wallet_path, "sepolia")
         print(f"DEBUG: Balance: {balance}")
         
         address = get_wallet_address(wallet_path)
@@ -296,7 +338,7 @@ def eth_compile_deploy():
         
     wallet_file = request.json.get("wallet_file")
     deploy_flag = request.json.get("deploy", True)
-    network = request.json.get("network", "localhost")
+    network = request.json.get("network", "sepolia")
     single_contract = request.json.get("single_contract", None)
     
     try:
@@ -394,11 +436,123 @@ def eth_interact_contract():
             caller_wallet=caller_wallet,
             gas_limit=gas_limit,
             gas_price=gas_price,
-            network="localhost"  # Default network for now
+            network="sepolia"  # Default network for now
         )
         
         if result["success"]:
             return jsonify({"success": True, "result": result})
+        else:
+            return jsonify({"success": False, "error": result["error"]}), 400
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"Internal error: {str(e)}"}), 500
+
+
+# ==============================
+# TEZOS ROUTES
+# ==============================
+
+@app.route("/tezos_compile_deploy", methods=["POST"])
+def tezos_compile_deploy():
+    """Compile and deploy Tezos contracts."""
+    if not TEZOS_ENABLED:
+        return jsonify({"error": "Tezos modules not available"}), 500
+        
+    contract_name = request.json.get("contract_name")
+    deploy_flag = request.json.get("deploy", True)
+    initial_balance = request.json.get("initial_balance", 0)
+    
+    try:
+        result = compile_and_deploy_tezos_contracts(
+            contract_name=contract_name,
+            deploy=deploy_flag,
+            initial_balance=initial_balance
+        )
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/tezos_get_contracts", methods=["GET"])
+def tezos_get_contracts():
+    """Get list of deployed Tezos contracts."""
+    if not TEZOS_ENABLED:
+        return jsonify({"error": "Tezos modules not available"}), 500
+        
+    try:
+        contracts = fetch_tezos_contracts()
+        return jsonify({"success": True, "contracts": contracts})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/tezos_get_entrypoints", methods=["POST"])
+def tezos_get_entrypoints():
+    """Get entrypoints for a specific Tezos contract."""
+    if not TEZOS_ENABLED:
+        return jsonify({"error": "Tezos modules not available"}), 500
+        
+    try:
+        contract = request.json.get("contract")
+        if not contract:
+            return jsonify({"success": False, "error": "Contract name required"}), 400
+        
+        entrypoints = fetch_tezos_entrypoints(contract)
+        return jsonify({"success": True, "entrypoints": entrypoints})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/tezos_get_contract_context", methods=["POST"])
+def tezos_get_contract_context():
+    """Get contract entrypoint context."""
+    if not TEZOS_ENABLED:
+        return jsonify({"error": "Tezos modules not available"}), 500
+        
+    try:
+        contract = request.json.get("contract")
+        entrypoint = request.json.get("entrypoint")
+        
+        if not contract or not entrypoint:
+            return jsonify({"success": False, "error": "Contract and entrypoint required"}), 400
+        
+        ctx = fetch_tezos_contract_context(contract, entrypoint)
+        return jsonify({"success": True, "context": ctx})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/tezos_interact_contract", methods=["POST"])
+def tezos_interact_contract():
+    """Interact with a deployed Tezos contract."""
+    if not TEZOS_ENABLED:
+        return jsonify({"error": "Tezos modules not available"}), 500
+        
+    try:
+        data = request.json
+        
+        contract = data.get("contract")
+        entrypoint = data.get("entrypoint")
+        parameters = data.get("parameters", "")
+        tez_amount = data.get("tez_amount", 0)
+        
+        # Validate required fields
+        if not contract or not entrypoint:
+            return jsonify({
+                "success": False,
+                "error": "Contract and entrypoint are required"
+            }), 400
+        
+        # Interact with contract
+        result = interact_with_tezos_contract(
+            contract_name=contract,
+            entrypoint_name=entrypoint,
+            parameters=parameters,
+            tez_amount=tez_amount
+        )
+        
+        if result["success"]:
+            return jsonify({"success": True, "result": result["result"]})
         else:
             return jsonify({"success": False, "error": result["error"]}), 400
             

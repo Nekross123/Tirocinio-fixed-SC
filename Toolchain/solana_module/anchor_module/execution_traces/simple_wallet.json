@@ -1,0 +1,136 @@
+{
+  "trace_title": "simple_wallet",
+  "trace_actors": [
+    
+    "owner",
+    
+    "receiver"
+    
+    
+  ],
+  "configuration": {
+    "solana": {
+      "use": "True"
+    },
+    "evm": {},
+    "tezos": {},
+    "cardano": {}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "deposit",
+      "waiting_time": 0,
+      "actors": [
+        "owner"
+      ],
+      "args": {"amount_to_deposit": 10000},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "user_wallet_pda": {
+          "opt": "s",
+          "param": [
+            "wallet" , "owner"
+          ]
+        },
+        "provider_wallet": "owner",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "create_transaction",
+      "waiting_time": 0,
+      "actors": [
+        "owner",
+        "receiver"
+      ],
+      "args": {"transaction_seed": "lol",
+        "transaction_lamports_amount": 100},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "user_wallet_pda": {
+          "opt": "s",
+          "param": [
+            "wallet" , "owner"
+          ]
+        },
+        "transaction_pda": {
+          "opt": "s",
+          "param": [
+            "lol","user_wallet_pda" 
+          ]
+        },
+
+        "provider_wallet": "owner",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "3",
+      "function_name": "execute_transaction",
+      "waiting_time": 0,
+      "actors": [
+        "owner",
+        "receiver"
+      ],
+      "args": {"transaction_seed": "lol"},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "user_wallet_pda": {
+          "opt": "s",
+          "param": [
+            "wallet" , "owner"
+          ]
+        },
+        "transaction_pda": {
+          "opt": "s",
+          "param": [
+            "lol","user_wallet_pda" 
+          ]
+        },
+        "provider_wallet": "owner",
+
+        "send_transaction": true
+      }
+    },
+    
+        {
+      "sequence_id": "4",
+      "function_name": "withdraw",
+      "waiting_time": 0,
+      "actors": [
+        "owner",
+        "receiver"
+      ],
+      "args": {"amount_to_withdraw": 100 , "transaction_seed" : "lol"},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "user_wallet_pda": {
+          "opt": "s",
+          "param": [
+            "wallet" , "owner"
+          ]
+        },
+        "transaction_pda": {
+          "opt": "s",
+          "param": [
+            "lol","user_wallet_pda" 
+          ]
+        },
+
+        "provider_wallet": "owner",
+
+        "send_transaction": true
+      }
+    }
+  ]
+}

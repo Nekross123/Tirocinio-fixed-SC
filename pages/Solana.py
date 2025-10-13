@@ -101,7 +101,7 @@ st.title("🌞 Solana Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Choose an action:",
-    ("Manage Wallets","Upload new program", "Compile & Deploy", "Interactive Data Insertion", "Close programs","Automatic Data Insertion", "Other")
+    ("Manage Wallets","Upload new program", "Compile & Deploy", "Interactive Data Insertion", "Close programs","Execution Traces")
 )
 
 WALLETS_PATH = os.path.join(toolchain_path, "solana_module", "solana_wallets")
@@ -390,7 +390,7 @@ elif selected_action == "Compile & Deploy":
                 st.warning("⚠️ Compilation completed with some failures")
 
 
-elif selected_action == "Automatic Data Insertion":
+elif selected_action == "Execution Traces":
 
     fetched_programs = fetch_initialized_programs()
     if not fetched_programs:
@@ -603,9 +603,7 @@ elif selected_action == "Close programs":
                 st.error(f"Backend connection error: {e}")
                 st.stop()
 
-else:
-    st.subheader("Other features")
-    st.write("Placeholder section for future DApp features.")
+
 
 # ==============================
 # Footer

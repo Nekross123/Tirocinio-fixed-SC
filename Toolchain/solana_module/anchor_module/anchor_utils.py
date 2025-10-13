@@ -303,14 +303,7 @@ def is_wallet(entry):
 
 def generate_pda_automatically(actors ,program_name ,sol_args , args):
     
-
-
-     
     complete_dict = build_complete_dict(actors , sol_args , args)
-
-
-
-
 
     for arg in complete_dict:
         value = complete_dict[arg]
@@ -360,11 +353,7 @@ def generate_pda_automatically(actors ,program_name ,sol_args , args):
                         seeds = [None] * n_seeds
                         i = 0
                         for param in param_list:
-                                
-                                
-                                
-                                
-
+                            
                                 if param not in complete_dict:
                                     seed = param
                                     seeds[i] = seed.encode()
@@ -379,8 +368,13 @@ def generate_pda_automatically(actors ,program_name ,sol_args , args):
 
                                 else:
                                     seed = complete_dict[param]
-                                    seeds[i] = seed.encode()
-                                    i += 1 
+                                    # Se il seed è un PDA (stringa di 44 caratteri), convertilo in Pubkey
+                                    if isinstance(seed, str) and len(seed) == 44:
+                                        pda_pubkey = Pubkey.from_string(seed)
+                                        seeds[i] = bytes(pda_pubkey)
+                                    else:
+                                        seeds[i] = seed.encode()
+                                        i += 1
 
 
                         
