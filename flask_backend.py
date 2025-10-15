@@ -5,7 +5,7 @@ import os
 import sys
 import asyncio
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "tezos-contract-2.0"))
 
 # Solana imports
@@ -58,7 +58,7 @@ except ImportError as e:
 
 app = Flask(__name__)
 
-WALLETS_PATH = os.path.join("Toolchain", "solana_module", "solana_wallets")
+WALLETS_PATH = os.path.join("Solana_module", "solana_module", "solana_wallets")
 
 
 async def get_wallet_balance(wallet_file):
@@ -123,7 +123,7 @@ def automatic_data_insertion():
     # Determina il tipo di blockchain basato sull'estensione del file
     if selected_trace_file.endswith('.json'):
         # Solana traces (JSON)
-        traces_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", "execution_traces")
+        traces_path = os.path.join(os.path.dirname(__file__), "Solana_module", "solana_module", "anchor_module", "execution_traces")
         trace_file_path = os.path.join(traces_path, selected_trace_file)
         
         if not selected_trace_file or not os.path.isfile(trace_file_path):
@@ -278,7 +278,7 @@ def get_program_ctx():
 @app.route("/close_program", methods=["POST"])
 def close_program():
     selected_program = request.json.get("program")
-    base_path = os.path.join(os.path.dirname(__file__), "Toolchain", "solana_module", "anchor_module", ".anchor_files")
+    base_path = os.path.join(os.path.dirname(__file__), "Solana_module", "solana_module", "anchor_module", ".anchor_files")
 
     # Percorso completo della cartella del programma
     program_dir = os.path.join(base_path, selected_program) if selected_program else None

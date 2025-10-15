@@ -242,7 +242,7 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network):
     """Deploy a compiled contract to the specified network."""
     try:
         # Load wallet
-        wallet_path = os.path.join("Toolchain", "ethereum_module", "ethereum_wallets", wallet_name)
+        wallet_path = os.path.join("ethereum_module", "ethereum_wallets", wallet_name)
         wallet_data = load_wallet_from_file(wallet_path)
         if not wallet_data:
             return {"success": False, "error": "Could not load wallet"}

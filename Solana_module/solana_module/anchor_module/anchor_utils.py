@@ -29,7 +29,7 @@ import importlib
 import importlib.util
 from based58 import b58encode
 from solders.pubkey import Pubkey
-from Toolchain.solana_module.solana_utils import solana_base_path, choose_wallet, load_keypair_from_file, selection_menu
+from Solana_module.solana_module.solana_utils import solana_base_path, choose_wallet, load_keypair_from_file, selection_menu
 from solana.rpc.async_api import AsyncClient
 
 
