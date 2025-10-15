@@ -48,7 +48,14 @@ def get_deployed_contracts():
 def get_available_wallets():
     """Ottieni la lista dei wallet disponibili"""
     try:
-        wallet_path = os.path.join(os.path.dirname(__file__), "..", "tezos_module", "tezos_wallets", "wallet.json")
+        wallet_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "tezos-contract-2.0",
+            "tezos_module",
+            "tezos_wallets",
+            "wallet.json",
+        )
         with open(wallet_path, 'r', encoding='utf-8') as f:
             wallets = json.load(f)
         return list(wallets.keys())
@@ -61,8 +68,15 @@ def get_available_wallets():
 
 def get_client(wallet_id):
     try:
-        # Cerca il wallet nella nuova directory tezos_module/tezos_wallets/
-        wallet_path = os.path.join(os.path.dirname(__file__), "..", "tezos_module", "tezos_wallets", "wallet.json")
+        # Cerca il wallet nella nuova directory tezos-contract-2.0/tezos_module/tezos_wallets/
+        wallet_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "tezos-contract-2.0",
+            "tezos_module",
+            "tezos_wallets",
+            "wallet.json",
+        )
         with open(wallet_path, 'r', encoding='utf-8') as f:
             wallets = json.load(f)
         key = wallets.get(str(wallet_id))

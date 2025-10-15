@@ -6,6 +6,7 @@ import sys
 import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "Toolchain"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "tezos-contract-2.0"))
 
 # Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
