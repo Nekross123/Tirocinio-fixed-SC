@@ -301,7 +301,7 @@ def close_program():
 # ETHEREUM ROUTES
 # ==============================
 
-ETH_WALLETS_PATH = os.path.join("Toolchain", "ethereum_module", "ethereum_wallets")
+ETH_WALLETS_PATH = os.path.join("ethereum_module", "ethereum_wallets")
 
 @app.route("/eth_wallet_balance", methods=["POST"])
 def eth_wallet_balance():

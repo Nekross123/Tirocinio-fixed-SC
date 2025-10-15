@@ -29,7 +29,7 @@ import time
 from web3 import Web3
 from eth_account import Account
 from solcx import compile_source, install_solc, set_solc_version
-from Toolchain.ethereum_module.ethereum_utils import (
+from ethereum_module.ethereum_utils import (
     run_command, 
     create_web3_instance, 
     load_wallet_from_file, 
@@ -38,7 +38,7 @@ from Toolchain.ethereum_module.ethereum_utils import (
     wait_for_transaction_receipt
 )
 
-hardhat_base_path = os.path.join("Toolchain", "ethereum_module", "hardhat_module")
+hardhat_base_path = os.path.join("ethereum_module", "hardhat_module")
 
 
 # -------------------------

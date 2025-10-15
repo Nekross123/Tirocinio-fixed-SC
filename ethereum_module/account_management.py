@@ -6,7 +6,7 @@
 from web3 import Web3, EthereumTesterProvider
 import json
 import os
-from Toolchain.ethereum_module.ethereum_utils import ethereum_base_path
+from ethereum_module.ethereum_utils import ethereum_base_path
 
 def create_account():
     """Create a new Ethereum account - following prof's approach."""

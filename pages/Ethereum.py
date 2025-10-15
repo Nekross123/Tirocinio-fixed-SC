@@ -5,8 +5,8 @@ import requests
 import json
 import asyncio
 
-toolchain_path = os.path.join(os.path.dirname(__file__), "..", "Toolchain")
-sys.path.append(toolchain_path)
+root_path = os.path.join(os.path.dirname(__file__), "..")
+sys.path.append(root_path)
 
 # ==============================
 # Import Ethereum modules
@@ -79,9 +79,9 @@ selected_action = st.sidebar.radio(
     ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive Contract Interaction")
 )
 
-WALLETS_PATH = os.path.join(toolchain_path, "ethereum_module", "ethereum_wallets")
-CONTRACTS_PATH = os.path.join(toolchain_path, "ethereum_module", "hardhat_module", "contracts")
-DEPLOYMENTS_PATH = os.path.join(toolchain_path, "ethereum_module", "hardhat_module", "deployments")
+WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
+CONTRACTS_PATH = os.path.join(root_path, "ethereum_module", "hardhat_module", "contracts")
+DEPLOYMENTS_PATH = os.path.join(root_path, "ethereum_module", "hardhat_module", "deployments")
 
 # ==============================
 # Main section
