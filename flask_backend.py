@@ -6,7 +6,7 @@ import sys
 import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "tezos-contract-2.0"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Tezos_module"))
 
 # Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
@@ -140,7 +140,7 @@ def automatic_data_insertion():
     
     elif selected_trace_file.endswith('.csv'):
         # Tezos traces (CSV)
-        traces_path = os.path.join(os.path.dirname(__file__), "tezos-contract-2.0", "toolchain", "execution_traces")
+        traces_path = os.path.join(os.path.dirname(__file__), "Tezos_module", "toolchain", "execution_traces")
         trace_file_path = os.path.join(traces_path, selected_trace_file)
         
         if not selected_trace_file or not os.path.isfile(trace_file_path):

@@ -3,7 +3,7 @@ from pathlib import Path
 import sys 
 import os
 
-tezos_toolchain_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+tezos_toolchain_path = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
 sys.path.append(tezos_toolchain_path)
 
 from contractUtils import (
@@ -31,19 +31,15 @@ st.caption("An interface to compile, deploy, and interact with Tezos smart contr
 
 def get_deployed_contracts():
     """Wrapper per getAddress con path corretto"""
+    original_dir = os.getcwd()
     try:
         # Cambia temporaneamente la directory per la funzione getAddress
-        original_dir = os.getcwd()
-        toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+        toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
         os.chdir(toolchain_dir)
-        
         contracts = getAddress()
-        os.chdir(original_dir)
         return contracts
-    except Exception as e:
-        if 'original_dir' in locals():
-            os.chdir(original_dir)
-        raise e
+    finally:
+        os.chdir(original_dir)
 
 def get_available_wallets():
     """Ottieni la lista dei wallet disponibili"""
@@ -51,7 +47,7 @@ def get_available_wallets():
         wallet_path = os.path.join(
             os.path.dirname(__file__),
             "..",
-            "tezos-contract-2.0",
+            "Tezos_module",
             "tezos_module",
             "tezos_wallets",
             "wallet.json",
@@ -68,11 +64,11 @@ def get_available_wallets():
 
 def get_client(wallet_id):
     try:
-        # Cerca il wallet nella nuova directory tezos-contract-2.0/tezos_module/tezos_wallets/
+        # Cerca il wallet nella nuova directory Tezos_module/tezos_module/tezos_wallets/
         wallet_path = os.path.join(
             os.path.dirname(__file__),
             "..",
-            "tezos-contract-2.0",
+            "Tezos_module",
             "tezos_module",
             "tezos_wallets",
             "wallet.json",
@@ -104,8 +100,8 @@ def compile_view():
     with col1:
         wallet_selection = st.selectbox("Select Wallet:", options=available_wallets, key="compile_wallet")
     with col2:
-        # Path corretto alla directory contracts di tezos-contract-2.0
-        contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+        # Path corretto alla directory contracts di Tezos_module
+        contracts_path = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "contracts")
         contracts = folderScan(contracts_path)
         contract_to_compile = st.selectbox("Select Contract:", options=contracts, key="compile_select")
 
@@ -115,7 +111,7 @@ def compile_view():
             if client:
                 # Cambia directory per la compilazione
                 original_dir = os.getcwd()
-                toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+                toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
                 os.chdir(toolchain_dir)
                 
                 contract_path = f"../contracts/{contract_to_compile}/{contract_to_compile}.py"
@@ -144,8 +140,8 @@ def deploy_view():
     with col1:
         wallet_selection = st.selectbox("Select Wallet:", options=available_wallets, key="deploy_wallet")
     with col2:
-        # Path corretto alla directory contracts di tezos-contract-2.0
-        contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+        # Path corretto alla directory contracts di Tezos_module
+        contracts_path = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "contracts")
         contracts = folderScan(contracts_path)
         contract_to_deploy = st.selectbox("Select Contract:", options=contracts, key="deploy_select")
 
@@ -159,7 +155,7 @@ def deploy_view():
                 return
             
             # Usa path assoluti per i file Michelson
-            contracts_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "contracts")
+            contracts_path = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "contracts")
             contract_folder = os.path.join(contracts_path, contract_to_deploy)
             
             # Debug: mostra tutti i file nella cartella del contratto
@@ -192,7 +188,7 @@ def deploy_view():
                 try:
                     # Cambia directory per addressUpdate
                     original_dir = os.getcwd()
-                    toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0", "toolchain")
+                    toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
                     
                     op_result = origination(
                         client=client,
@@ -292,7 +288,11 @@ def trace_view():
     st.info("This function executes a series of predefined transactions from the files in `execution_traces/`.")
 
     if st.button("▶️ Start Trace Execution"):
+        original_dir = os.getcwd()
         try:
+            # Esegui dalla cartella toolchain per risolvere i path relativi
+            toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
+            os.chdir(toolchain_dir)
             execution_traces = csvReader()
             if not execution_traces:
                 st.warning("No execution traces found.")
@@ -313,11 +313,20 @@ def trace_view():
 
         except Exception as e:
             st.error(f"Error during trace execution: {e}")
+        finally:
+            os.chdir(original_dir)
 
 def exportResult(opResult):
     fileName = "transactionsOutput"
-    csvWriter(fileName=fileName+".csv", op_result=opResult)
-    jsonWriter(fileName=fileName+".json", opReport=opResult)
+    # Salva i risultati nella cartella toolchain
+    original_dir = os.getcwd()
+    try:
+        toolchain_dir = os.path.join(os.path.dirname(__file__), "..", "Tezos_module", "toolchain")
+        os.chdir(toolchain_dir)
+        csvWriter(fileName=fileName+".csv", op_result=opResult)
+        jsonWriter(fileName=fileName+".json", opReport=opResult)
+    finally:
+        os.chdir(original_dir)
     st.success(f"Result of operation {opResult['entryPoint']} saved to file.")
 
 st.sidebar.header("Features")

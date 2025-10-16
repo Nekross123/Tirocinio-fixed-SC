@@ -9,7 +9,7 @@ Benvenuto/a in Rosetta_SC! Questo progetto raccoglie (in un unico posto) tre too
   - Compilazione e deploy di programmi Anchor
   - Inserimento dati automatico e interattivo
   - Gestione wallet Solana (Devnet/Testnet/Mainnet)
-- Tezos (cartella `tezos-contract-2.0/` + wrapper in `tezos-contract-2.0/tezos_module`)
+- Tezos (cartella `Tezos_module/` + wrapper in `Tezos_module/tezos_module`)
   - Compilazione SmartPy, origination, chiamata entrypoint
   - Esecuzione tracce da CSV
   - Gestione wallet Tezos (Ghostnet)
@@ -50,9 +50,9 @@ Dal menu “Solana”:
 - Execution Traces → esecuzione automatica da file JSON
 
 ### Tezos
-- Contratti: `tezos-contract-2.0/contracts/<NomeContratto>/<NomeContratto>.py`
-- Wallet: `tezos-contract-2.0/tezos_module/tezos_wallets/wallet.json`
-- Tracce: `tezos-contract-2.0/toolchain/execution_traces/*.csv`
+- Contratti: `Tezos_module/contracts/<NomeContratto>/<NomeContratto>.py`
+- Wallet: `Tezos_module/tezos_module/tezos_wallets/wallet.json`
+- Tracce: `Tezos_module/toolchain/execution_traces/*.csv`
 
 Dal menu “Tezos”:
 - Compile → esegue SmartPy e genera Michelson

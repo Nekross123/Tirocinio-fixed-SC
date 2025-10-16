@@ -73,7 +73,7 @@ For testnets and mainnet, you need to set up an Infura project:
 
 ## Wallet Management
 
-Wallets are stored as JSON files in `Toolchain/ethereum_module/ethereum_wallets/`.
+Wallets are stored as JSON files in `ethereum_module/ethereum_wallets/`.
 
 Each wallet file contains:
 - `address`: The Ethereum address

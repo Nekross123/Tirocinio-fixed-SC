@@ -142,7 +142,7 @@ def build_function_call_data(contract_deployment_id, function_name, param_values
                 if not wallet_file or wallet_file == '--':
                     raise ValueError(f"Wallet not selected for {param_name}")
                 
-                wallet_path = os.path.join("Toolchain", "ethereum_module", "ethereum_wallets", wallet_file)
+                wallet_path = os.path.join("ethereum_module", "ethereum_wallets", wallet_file)
                 wallet_data = load_wallet_from_file(wallet_path)
                 if not wallet_data:
                     raise ValueError(f"Could not load wallet {wallet_file}")
@@ -215,7 +215,7 @@ def interact_with_contract(contract_deployment_id, function_name, param_values, 
         abi = deployment_info['abi']
         
         # Load caller wallet
-        wallet_path = os.path.join("Toolchain", "ethereum_module", "ethereum_wallets", caller_wallet)
+        wallet_path = os.path.join("ethereum_module", "ethereum_wallets", caller_wallet)
         wallet_data = load_wallet_from_file(wallet_path)
         if not wallet_data:
             raise ValueError("Could not load caller wallet")
