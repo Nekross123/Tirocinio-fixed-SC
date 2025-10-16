@@ -1,10 +1,10 @@
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
+from Solana_module.solana_module.anchor_module.anchor_utils import fetch_required_accounts, fetch_signer_accounts, generate_pda, \
+    fetch_args, check_type, convert_type, fetch_cluster, anchor_base_path, load_idl, choose_program, choose_instruction, \
+    check_if_array
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
@@ -36,6 +36,10 @@ from Solana_module.solana_module.anchor_module.transaction_manager import build_
 # ====================================================
 
 def choose_program_to_run():
+    """Main entry: choose a program and then an instruction to run interactively.
+
+    Returns True to keep the Anchor menu open; False to exit to main menu.
+    """
     repeat = True
 
     # Repeat is needed to manage the going back from the following menus
@@ -54,6 +58,7 @@ def choose_program_to_run():
 # ====================================================
 
 def _choose_instruction_to_run(program_name):
+    """Let the user pick one instruction from the program's IDL and configure it."""
     idl_file_path = f'{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/target/idl/{program_name}.json'
     idl = load_idl(idl_file_path)
 
@@ -69,6 +74,11 @@ def _choose_instruction_to_run(program_name):
     return False # Needed to come back to main menu after finishing
 
 def _setup_required_accounts(instruction, idl, program_name):
+    """Collect all required accounts (wallet or PDA) and any signer keypairs.
+
+    For each required account we ask if it's a wallet or a PDA and store
+    the right object. Signer accounts get their Keypair saved for later.
+    """
     required_accounts = fetch_required_accounts(instruction, idl)
     signer_accounts = fetch_signer_accounts(instruction, idl)
     final_accounts = dict()
@@ -133,7 +143,11 @@ def _setup_required_accounts(instruction, idl, program_name):
     return False
 
 def _setup_payees(remaining_accounts):
-    """Gestisce la configurazione dei payees per l'istruzione initialize"""
+    """Configure payees (used by initialize instruction for PaymentSplitter).
+
+    We select unique wallets and build remaining_accounts entries with
+    pubkey + signer/writable flags set to False.
+    """
     print(f"\n=== PAYEES SETUP ===")
     print("Now you need to add payees (recipients of the payment splitting).")
     print("How many payees do you want to add?")
@@ -183,6 +197,11 @@ def _setup_payees(remaining_accounts):
     return False
 
 def _setup_args(instruction, idl, program_name, accounts, signer_account_keypairs, remaining_accounts=None):
+    """Collect and validate instruction arguments.
+
+    Supports scalars, fixed-size arrays, and vectors. For initialize(shares_amounts),
+    we enforce the number of shares equals the number of payees and each > 0.
+    """
     required_args = fetch_args(instruction, idl)
     repeat = _manage_args(required_args, program_name, instruction, accounts, signer_account_keypairs, remaining_accounts)
     if repeat:
@@ -191,6 +210,7 @@ def _setup_args(instruction, idl, program_name, accounts, signer_account_keypair
         return False
 
 def _manage_args(args, program_name, instruction, accounts, signer_account_keypairs, remaining_accounts=None):
+    """Interactive loop to fill arguments; returns True to go back, False to proceed."""
     final_args = dict()
     repeat = True
     i = 0
@@ -327,6 +347,7 @@ def _manage_args(args, program_name, instruction, accounts, signer_account_keypa
     return False
 
 def _manage_provider(program_name, instruction, accounts, args, signer_account_keypairs, remaining_accounts=None):
+    """Create client and provider with a chosen wallet, then manage transaction flow."""
     print("Now working with the transaction provider.")
     chosen_wallet = choose_wallet()
     if chosen_wallet is None:
@@ -340,6 +361,10 @@ def _manage_provider(program_name, instruction, accounts, args, signer_account_k
         return asyncio.run(_manage_transaction(program_name, instruction, accounts, args, signer_account_keypairs, client, provider, is_deployed, remaining_accounts))
 
 async def _manage_transaction(program_name, instruction, accounts, args, signer_account_keypairs, client, provider, is_deployed, remaining_accounts=None):
+    """Build, size, fee-compute, and optionally send the transaction.
+
+    Note: We only offer to send if the program was deployed with this toolchain.
+    """
     # Build transaction
     tx = await build_transaction(program_name, instruction, accounts, args, signer_account_keypairs, client, provider, remaining_accounts)
     print('Transaction built. Computing size and fees...')

@@ -45,14 +45,18 @@ st.set_page_config(
 # ==============================s
 st.title("🌹 Welcome to Rosetta Smart Contract")
 st.markdown("""
-This application let you manage easily your **Smart Contract toolchains**.
+This application lets you easily manage your **Smart Contract toolchains**.
+
 ### Quick Start Guide:
-1. On the left you have the **sidebar**, select the toolchain you want to use:
-   - **Solana** per lavorare con smart contract Solana.
-   - **Tezos** per lavorare con smart contract Tezos.
-3. After deploying a program, you can use the **Automatic Data Insertion** feature , which is present in each toolchain, to test it with predefined execution traces.
-    The results will be printe below after the execution.
+1. Use the **sidebar** on the left to select the toolchain you want to use:
+   - **Solana** to work with Solana smart contracts.
+   - **Tezos** to work with Tezos smart contracts.
+   - **Ethereum (EVM)** to work with Ethereum smart contracts.
+   - **Cardano** to work with Cardano smart contracts.
+2. Each toolchain page provides actions like wallet management, compile & deploy, and data insertion.
+3. After deploying a program, you can use the **Automatic Data Insertion** feature (available in each toolchain) to test it with predefined execution traces. Results will be printed below after execution.
 """)
+
 upload_trace_file()
 # ==============================
 # Footer

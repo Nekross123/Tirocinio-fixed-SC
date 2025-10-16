@@ -1,6 +1,6 @@
  # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -36,23 +36,23 @@ from solana.rpc.async_api import AsyncClient
 anchor_base_path = os.path.dirname(os.path.abspath(__file__))
 
 
-# ====================================================
-# PUBLIC FUNCTIONS
-# ====================================================
 
 def fetch_initialized_programs():
+    """Return the list of Anchor programs we already initialized.
+
+    Basically I just scan the .anchor_files folder and collect programs
+    that have the generated anchorpy client (anchorpy_files). If that exists,
+    we can interact with the program from Python.
+    """
     path_to_explore = f"{anchor_base_path}/.anchor_files"
     programs_with_anchorpy_files = []
 
-    # Check if the base directory exists before proceeding
     if not os.path.exists(path_to_explore):
         return programs_with_anchorpy_files
 
-    # Iterate program folders
     for program in os.listdir(path_to_explore):
         program_path = os.path.join(path_to_explore, program)
 
-        # Check if anchorpy_files folder is present
         if os.path.isdir(program_path):
             anchorpy_path = os.path.join(program_path, 'anchorpy_files')
             if os.path.isdir(anchorpy_path):
@@ -61,13 +61,22 @@ def fetch_initialized_programs():
     return programs_with_anchorpy_files
 
 def fetch_program_instructions(idl):
+    """Extract instruction names from an IDL object.
+
+    The IDL format stores a list of instruction definitions; here I only
+    care about their names because that’s what we show in menus.
+    """
     instructions = []
-    # Extract instructions
     for instruction in idl['instructions']:
         instructions.append(instruction['name'])
     return instructions
 
 def fetch_required_accounts(instruction, idl):
+    """Return account names required by a given instruction (snake_case).
+
+    Note: I skip 'systemProgram' on purpose because it’s implicit on Solana,
+    and we usually don’t ask the user to pick it manually.
+    """
     instruction_dict = next((instr for instr in idl['instructions'] if instr['name'] == instruction), None)
     if instruction_dict is None:
         print(f"Istruzione '{instruction}' non trovata nell'IDL.")
@@ -77,6 +86,7 @@ def fetch_required_accounts(instruction, idl):
     return required_accounts
 
 def choose_program():
+    """Ask the user to pick one of the initialized programs (simple menu)."""
     programs = fetch_initialized_programs()
     if not programs:
         print("No program has been initialized yet")
@@ -85,6 +95,7 @@ def choose_program():
         return selection_menu('program', programs)
 
 def choose_instruction(idl):
+    """Ask the user to pick one instruction from the provided IDL."""
     instructions = fetch_program_instructions(idl)
     if not instructions:
         print("No instruction found for this program")
@@ -93,6 +104,12 @@ def choose_instruction(idl):
         return selection_menu('instruction', instructions)
 
 def fetch_cluster(program_name):
+    """Read the Anchor.toml of a program to figure out the chosen cluster.
+
+    If the cluster isn’t one of Localnet/Devnet/Mainnet, it means we didn’t
+    deploy with this toolchain, so I fall back to Devnet and mark is_deployed=False
+    to avoid sending transactions by accident.
+    """
     file_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/Anchor.toml"
     config = toml.load(file_path)
     cluster = config['provider']['cluster']
@@ -104,19 +121,25 @@ def fetch_cluster(program_name):
         return 'Devnet', False
 
 def load_idl(file_path):
+    """Load an IDL JSON file from disk and return it as a dict."""
     with open(file_path, 'r') as f:
         return json.load(f)
 
 def fetch_signer_accounts(instruction, idl):
-    # Find the instruction in the IDL
+    """Return the list of accounts that must sign for this instruction."""
     instruction_dict = next(instr for instr in idl['instructions'] if instr['name'] == instruction)
-
-    # Extract signer accounts
     required_signer_accounts = [account['name'] for account in instruction_dict['accounts'] if account['isSigner']]
 
     return required_signer_accounts
 
 def generate_pda(program_name, launched_from_utilities):
+    """Interactive PDA generation helper.
+
+    Options:
+    - seeds: derive PDA using a list of seeds
+    - random: generate a random base58 string and treat it like an address
+    - manual: paste a base58 address yourself (only enabled from the flow that needs it)
+    """
     pda_key = ''
     allowed_choices = ['1','2','0']
     if not launched_from_utilities:
@@ -162,6 +185,7 @@ def generate_pda(program_name, launched_from_utilities):
 
 
 def fetch_args(instruction, idl):
+    """Return the list of args (name/type) for an instruction, using snake_case names."""
     # Find instruction
     instruction_dict = next(instr for instr in idl['instructions'] if instr['name'] == instruction)
 
@@ -171,6 +195,11 @@ def fetch_args(instruction, idl):
     return required_args
 
 def check_if_array(arg):
+    """Detect if an arg is a fixed-size array and return (element_type, length).
+
+    If the element type is unsupported, I still return the length so callers
+    can validate sizes even when they can’t parse values.
+    """
     if isinstance(arg['type'], dict) and 'array' in arg['type']:
         array_type = check_type(arg['type']['array'][0])
         array_length = arg['type']['array'][1]
@@ -181,6 +210,7 @@ def check_if_array(arg):
         return None, None
     
 def check_if_vec(arg):
+    """Detect if an arg is a Vec and return the element type (or None)."""
     if isinstance(arg['type'], dict) and 'vec' in arg['type']:
         vec_type = check_type(arg['type']['vec'])
         if vec_type is None:
@@ -190,10 +220,16 @@ def check_if_vec(arg):
         return None
 
 def check_if_bytes_type(arg):
+    """Small helper to spot raw bytes parameters."""
     if arg == "bytes":
             return True
 
 def check_type(type):
+    """Map IDL primitive types into a friendly label I use in prompts.
+
+    Returns one of: integer | boolean | floating point number | string | bytes
+    or an "Unsupported type" message that also echoes the original type.
+    """
     if (type == "u8" or type == "u16" or type == "u32" or type == "u64" or type == "u128" or type == "u256"
             or type == "i8" or type == "i16" or type == "i32" or type == "i64" or type == "i128" or type == "i256"):
         return "integer"
@@ -209,6 +245,11 @@ def check_type(type):
         return f"Unsupported type\nThe type you are trying to use is -> {type}\n"
 
 def convert_type(type, value):
+    """Parse a string value into the expected Python type based on our labels.
+
+    This is used to convert user input (from CLI/Streamlit) into actual
+    integers/floats/bools, or keep strings/bytes as needed.
+    """
     try:
         if type == "integer":
             return int(value)
@@ -227,11 +268,17 @@ def convert_type(type, value):
         return None
     
 def input_token_account_manually():
+    """Prompt to manually type a token account address (44 chars)."""
 
     return input("Insert the token account(must be 44 characters long)")
 
 
 def bind_actors(trace_name):
+    """Bind each actor from a JSON trace to a wallet file.
+
+    I look into solana_wallets and try to assign the first N wallet files
+    to the N actors in the trace. If there aren’t enough files, I explain why.
+    """
 
     #this function binds each actor with a wallet
     with open(f"{anchor_base_path}/execution_traces/{trace_name}", "r") as f:
@@ -262,20 +309,32 @@ def bind_actors(trace_name):
     return association
 
 def find_args(trace):
+    """Return the 'args' dict from a trace entry."""
     return trace["args"]
 
 
 def find_sol_arg(trace):
+    """Return the 'solana' section from a trace entry."""
     return trace["solana"]
 
-#this function build the complete dictionary of whatever you need for the contract form the json trace file
 def build_complete_dict(actors , sol_args , args):
+    """Merge actors + solana + args into one dictionary.
+
+    Handy to have a single lookup table when building accounts and parameters.
+    """
     
 
      
     return actors | sol_args | args
 
 def is_pda(entry):
+    """Best-effort check to see if a string looks like a PDA address.
+
+    Heuristic:
+    - If it ends with .json -> it’s a wallet file, not a PDA
+    - If it decodes to a Pubkey and is on-curve -> it’s a wallet (not PDA)
+    - Otherwise, treat it as PDA.
+    """
     # Caso 1: file locale JSON
     if entry.lower().endswith(".json"):
         return False
@@ -288,6 +347,7 @@ def is_pda(entry):
         print("invalid address or wallet")
 
 def is_wallet(entry):
+    """Best-effort check to see if a string is a wallet (file or on-curve key)."""
     # Caso 1: file locale JSON
     if entry.lower().endswith(".json"):
         return True  # è un wallet file
@@ -302,6 +362,13 @@ def is_wallet(entry):
 
 
 def generate_pda_automatically(actors ,program_name ,sol_args , args):
+    """Auto-fill PDAs in a merged dict using rules in the JSON trace.
+
+    Supports three modes for each PDA-shaped entry:
+    - opt == 's': derive with seeds (strings, wallet pubkeys, or PDA bytes)
+    - opt == 'r': generate a random-like address
+    - opt == 'p': use a provided base58 address
+    """
     
     complete_dict = build_complete_dict(actors , sol_args , args)
 
@@ -407,9 +474,7 @@ def generate_pda_automatically(actors ,program_name ,sol_args , args):
     return complete_dict
 
 def get_network_from_client(client):
-    """
-    Determina la rete basandosi sull'endpoint del client
-    """
+    """Figure out the network by looking at the RPC endpoint URL."""
     endpoint = client._provider.endpoint_uri
     
     if "devnet" in endpoint.lower():
@@ -433,12 +498,14 @@ def get_network_from_client(client):
 # ====================================================
 
 def _camel_to_snake(camel_str):
+    """Convert CamelCase (from IDL) to snake_case (friendlier for Python CLI)."""
     # Use regex to add a _ before uppercase letters, excluded the first letter
     snake_str = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', camel_str)
     # Converto to lower case the whole string, leaving only the first letter as it is
     return snake_str[0] + snake_str[1:].lower()
 
 def _choose_number_of_seed(program_name):
+    """Ask how many seeds to use for PDA derivation and then collect them."""
     pda_key = None
     repeat = True
 
@@ -452,6 +519,11 @@ def _choose_number_of_seed(program_name):
     return pda_key, False
 
 def _manage_seed_insertion(program_name, n_seeds):
+    """Interactively collect each seed and build the PDA using program_id.
+
+    Critical bit: I dynamically import program_id from the generated folder,
+    because it’s specific to each initialized Anchor project.
+    """
     # Dynamically import program id
     module_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchorpy_files/program_id.py"
     spec = importlib.util.spec_from_file_location("program_id", module_path)
@@ -507,7 +579,11 @@ def _manage_seed_insertion(program_name, n_seeds):
 
 
 def upload_anchor_program():
-    """UI component for uploading Solana program (.rs) files via drag & drop."""
+    """UI to upload a Rust (.rs) program file and place it under anchor_programs.
+
+    I also sanity-check that the file likely contains an Anchor program by
+    searching for a declare_id!(...) macro, just to help the user.
+    """
 
     st.subheader("📦 Upload Solana Program")
 

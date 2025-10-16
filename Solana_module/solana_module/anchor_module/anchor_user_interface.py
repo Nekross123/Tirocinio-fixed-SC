@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,26 +29,23 @@ from Solana_module.solana_module.anchor_module.anchor_utilities import choose_pr
 from Solana_module.solana_module.anchor_module.program_compiler_and_deployer import compile_programs
 from Solana_module.solana_module.anchor_module.interactive_data_insertion_manager import choose_program_to_run
 
-
 def choose_action():
+    """Top-level Anchor CLI menu: compile, run, or open utilities."""
     allowed_choices = ["1", "2", "3", "0"]
     choice = None
 
-    # Interactive menu
     while choice != "0":
-        # Print options
         print("What you wanna do?")
         print("1) Compile new program(s)")
         print("2) Run program")
         print("3) Utilities")
         print("0) Back to language selection")
 
-        # Manage choice
         choice = input()
         if choice == "1":
             compile_programs()
         elif choice == "2":
-                _choose_running_mode()
+            _choose_running_mode()
         elif choice == "3":
             _choose_utility()
         elif choice == "0":
@@ -57,18 +54,16 @@ def choose_action():
             print("Please insert a valid choice.")
 
 def _choose_running_mode():
+    """Choose between interactive or automatic execution trace mode."""
     allowed_choices = ["1", "2", "0"]
     choice = None
 
-    # Interactive menu
     while choice != "0":
-        # Print options
         print("Which mode?")
         print("1) Interactive mode")
         print("2) Automatic mode")
         print("0) Back to Anchor menu")
 
-        # Manage choice
         choice = input()
         if choice == "1":
             repeat = choose_program_to_run()
@@ -85,12 +80,11 @@ def _choose_running_mode():
             print("Please insert a valid choice.")
 
 def _choose_utility():
+    """Utilities menu: list programs, inspect IDL, generate PDA, close/remove."""
     allowed_choices = ["1", "2", "3", "4", "5", "6", "0"]
     choice = None
 
-    # Interactive menu
     while choice != "0":
-        # Print options
         print("What you wanna do?")
         print("1) Get available programs")
         print("2) Get program instructions")
@@ -101,7 +95,6 @@ def _choose_utility():
         print("7) Close and remove initialized Anchor program")
         print("0) Back to Anchor menu")
 
-        # Manage choice
         choice = input()
         if choice == "1":
             get_initialized_programs()

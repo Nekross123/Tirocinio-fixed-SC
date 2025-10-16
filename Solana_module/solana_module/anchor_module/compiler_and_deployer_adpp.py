@@ -1,7 +1,7 @@
 
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025  Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +45,11 @@ def _remove_extension(filename: str) -> str:
 # VERSIONE HEADLESS: COMPILAZIONE E DEPLOY TUTTO JSON
 # =====================================================
 def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False, single_program=None):
+    """Headless compile -> optional anchorpy init -> optional deploy pipeline.
+
+    Returns a JSON-friendly dict per program with compile/deploy results, IDs,
+    and any errors. Supports selecting a single program by filename.
+    """
 
     results = []
     operating_system = platform.system()
@@ -121,6 +126,7 @@ def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False
 # FUNZIONI PRIVATE BASE
 # =====================================================
 def _read_rs_files(programs_path, single_program=None):
+    """Read .rs files from anchor_programs, optional filtering by one program name."""
     if not os.path.isdir(programs_path):
         return [], []
     
@@ -143,6 +149,7 @@ def _read_rs_files(programs_path, single_program=None):
 
 
 def _compile_program(program_name, operating_system, program_code):
+    """Initialize, update Cargo.toml, build, and return (success, program_id)."""
     done_init = _perform_anchor_initialization(program_name, operating_system)
     if not done_init:
         return False, None, None, None
@@ -159,6 +166,7 @@ def _compile_program(program_name, operating_system, program_code):
 
 
 def _perform_anchor_initialization(program_name, operating_system):
+    """Create project folders and run anchor init for the program."""
     target_dir = os.path.join(anchor_base_path, ".anchor_files", program_name)
     commands = [
         f"mkdir -p {target_dir}",
@@ -170,6 +178,7 @@ def _perform_anchor_initialization(program_name, operating_system):
 
 
 def _perform_anchor_build(program_name, program_code, operating_system):
+    """Write lib.rs with detected program_id, run cargo update + anchor build."""
 
     root_env_dir = os.path.join(anchor_base_path, ".anchor_files", program_name, "anchor_environment")
     lib_path = os.path.join(root_env_dir, "programs", "anchor_environment", "src", "lib.rs")
@@ -220,12 +229,14 @@ def _perform_anchor_build(program_name, program_code, operating_system):
 
 
 def _write_program_in_lib_rs(lib_path, program_name, program_code):
+    """Persist the updated Rust source to lib.rs for the initialized project."""
     os.makedirs(os.path.dirname(lib_path), exist_ok=True)
     with open(lib_path, "w", encoding="utf-8") as f:
         f.write(program_code)
 
 
 def _extract_program_id(lib_path):
+    """Try to regex-extract program_id from lib.rs; return None if not found."""
     if not os.path.exists(lib_path):
         return None
     with open(lib_path, "r", encoding="utf-8") as f:
@@ -238,6 +249,7 @@ def _extract_program_id(lib_path):
 # CARGO.TOML E DIPENDENZE
 # =====================================================
 def _detect_dependencies_from_code(program_code: str):
+    """Heuristically identify Rust deps (pyth, switchboard, spl, mpl, etc.)."""
     deps = {}
     if 'pyth_sdk_solana' in program_code or 'pyth_sdk_solana::' in program_code:
         deps['pyth-sdk-solana'] = '0.10'
@@ -252,6 +264,7 @@ def _detect_dependencies_from_code(program_code: str):
     return deps
 
 def _check_for_anchor_spl_usage(program_code: str):
+    """Return True if anchor_spl usage indicators are present in the code."""
     indicators = [
         'use anchor_spl', 'anchor_spl::', 'Token,', 'TokenAccount,', 'AssociatedToken',
         'SetAuthority', 'Transfer', 'token::', 'associated_token::'
@@ -259,6 +272,7 @@ def _check_for_anchor_spl_usage(program_code: str):
     return any(i in program_code for i in indicators)
 
 def addInitIfNeeded(cargo_path, program_code):
+    """Ensure anchor-lang init-if-needed and add detected deps/features to Cargo.toml."""
     try:
         if not os.path.exists(cargo_path):
             return False
@@ -342,6 +356,7 @@ def addInitIfNeeded(cargo_path, program_code):
         return False
 
 def _update_program_id(lib_rs_path, program_code):
+    """Replace declare_id!(...) with the program_id from the generated lib.rs."""
     """Legge il program id generato da anchor init e lo inserisce nel nuovo sorgente."""
     if not os.path.exists(lib_rs_path):
         raise FileNotFoundError("lib.rs non trovato per aggiornare il program id")
@@ -355,6 +370,7 @@ def _update_program_id(lib_rs_path, program_code):
     return updated, new_program_id
 
 def _impose_cargo_lock_version(program_name):
+    """Force Cargo.lock lines to version = 3 to mitigate -Znext errors."""
     file_path = os.path.join(anchor_base_path, '.anchor_files', program_name, 'anchor_environment', 'Cargo.lock')
     if not os.path.exists(file_path):
         return
@@ -373,6 +389,7 @@ def _impose_cargo_lock_version(program_name):
 # ANCHORPY INIT
 # =====================================================
 def _initialize_anchorpy(program_name, program_id,operating_system):
+    """Generate Python client code with anchorpy client-gen."""
     idl_path = os.path.join(
         anchor_base_path, ".anchor_files", program_name,
         "anchor_environment", "target", "idl", f"{program_name}.json"
@@ -394,6 +411,7 @@ def _initialize_anchorpy(program_name, program_id,operating_system):
 # CONVERSIONE IDL V31 -> V29
 # =====================================================
 def _convert_idl_for_anchorpy(program_name):
+    """Convert Anchor v31-style IDL to v29 format expected by AnchorPy."""
     import os, re, json
     idl_file_path = os.path.join(
         anchor_base_path, ".anchor_files", program_name,
@@ -495,6 +513,7 @@ def _convert_idl_for_anchorpy(program_name):
 
 
 def _snake_to_camel(snake_str):
+    """Convert snake_case to camelCase for IDL account names."""
     import re
     return re.sub(r'_([a-z])', lambda m: m.group(1).upper(), snake_str)
 
@@ -504,6 +523,7 @@ def _snake_to_camel(snake_str):
 # DEPLOY PROGRAMMI
 # =====================================================
 def _deploy_program(program_name, operating_system, wallet_name=None, cluster="Devnet"):
+    """Deploy an Anchor program after updating Anchor.toml with wallet/cluster."""
     if not wallet_name:
         wallet_name = choose_wallet()
 
@@ -539,6 +559,7 @@ def _deploy_program(program_name, operating_system, wallet_name=None, cluster="D
 
 
 def _parse_deploy_output(output):
+    """Extract Program Id and Signature from anchor deploy output (regex-based)."""
     pid = re.search(r"Program Id: (\S+)", output)
     sig = re.search(r"Signature: (\S+)", output)
     return pid.group(1) if pid else None, sig.group(1) if sig else None

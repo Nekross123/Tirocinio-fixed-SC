@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,10 @@ from Solana_module.solana_module.solana_utilities import request_balance, get_pu
 from Solana_module.solana_module.anchor_module import anchor_user_interface
 # ADD HERE NEW SOLANA LANGUAGES REQUIRED IMPORTS (STARTING FROM THE PROJECT ROOT)
 
-
 def choose_action():
-    # Manage allowed choices
     allowed_choices = ['1', '2', '0']
     choice = None
 
-    # Print available choices
     while choice not in allowed_choices:
         print("Choose an option:")
         print("1) Choose language")
@@ -53,14 +50,11 @@ def choose_action():
             print("Invalid choice. Please insert a valid choice.")
 
 def _choose_language():
-    # ADD HERE NEW SUPPORTED LANGUAGES
     supported_languages = ['Anchor']
 
-    # Manage allowed choices
     allowed_choices = list(map(str, range(1, len(supported_languages) + 1))) + ['0']
     choice = None
 
-    # Print available choices
     while choice not in allowed_choices:
         print("Choose a language:")
         for i, lang in enumerate(supported_languages, start=1):
@@ -72,7 +66,6 @@ def _choose_language():
         if choice == '1':
             anchor_user_interface.choose_action()
             choice = None
-        # ADD HERE NEW LANGUAGE CALLS
         elif choice == '0':
             return
         else:
@@ -81,7 +74,6 @@ def _choose_language():
 def _choose_utility():
     choice = None
 
-    # Print available choices
     while choice != '0':
         print("What you wanna do?")
         print("1) Request balance")
