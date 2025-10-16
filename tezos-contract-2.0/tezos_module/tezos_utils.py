@@ -10,7 +10,7 @@ import sys
 import json
 
 # Path al codice tezos esistente (NO modifiche)
-tezos_base_path = os.path.join(os.path.dirname(__file__), "..", "tezos-contract-2.0")
+tezos_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 toolchain_path = os.path.join(tezos_base_path, "toolchain")
 contracts_path = os.path.join(tezos_base_path, "contracts")
 

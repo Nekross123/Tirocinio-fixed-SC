@@ -9,12 +9,12 @@ from anchorpy import Provider, Wallet
 from solders.pubkey import Pubkey
 from based58 import b58encode
 
-from Toolchain.solana_module.solana_utils import (
+from Solana_module.solana_module.solana_utils import (
     create_client,
     load_keypair_from_file,
     solana_base_path,
 )
-from Toolchain.solana_module.anchor_module.anchor_utils import (
+from Solana_module.solana_module.anchor_module.anchor_utils import (
     fetch_required_accounts,
     fetch_signer_accounts,
     fetch_args,
@@ -27,7 +27,7 @@ from Toolchain.solana_module.anchor_module.anchor_utils import (
     fetch_program_instructions,
     fetch_initialized_programs,
 )
-from Toolchain.solana_module.anchor_module.transaction_manager import (
+from Solana_module.solana_module.anchor_module.transaction_manager import (
     build_transaction,
     measure_transaction_size,
     compute_transaction_fees,

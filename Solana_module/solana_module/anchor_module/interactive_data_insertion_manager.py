@@ -24,11 +24,11 @@
 
 import asyncio
 from anchorpy import Provider, Wallet
-from Toolchain.solana_module.solana_utils import create_client, choose_wallet, load_keypair_from_file, solana_base_path
-from Toolchain.solana_module.anchor_module.anchor_utils import fetch_required_accounts, fetch_signer_accounts, generate_pda, \
+from Solana_module.solana_module.solana_utils import create_client, choose_wallet, load_keypair_from_file, solana_base_path
+from Solana_module.solana_module.anchor_module.anchor_utils import fetch_required_accounts, fetch_signer_accounts, generate_pda, \
     fetch_args, check_type, convert_type, fetch_cluster, anchor_base_path, load_idl, choose_program, choose_instruction, \
     check_if_array
-from Toolchain.solana_module.anchor_module.transaction_manager import build_transaction, measure_transaction_size, compute_transaction_fees, send_transaction
+from Solana_module.solana_module.anchor_module.transaction_manager import build_transaction, measure_transaction_size, compute_transaction_fees, send_transaction
 
 
 # ====================================================

@@ -6,16 +6,16 @@ import requests
 import json
 import asyncio
 
-toolchain_path = os.path.join(os.path.dirname(__file__), "..", "Toolchain")
-sys.path.append(toolchain_path)
+solana_path = os.path.join(os.path.dirname(__file__), "..", "Solana_module")
+sys.path.append(solana_path)
 # ==============================
 # Import Solana modules
 # ==============================
-from solana_module.anchor_module.dapp_automatic_insertion_manager import  fetch_initialized_programs , build_table
-import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
-from  solana_module.solana_utils import load_keypair_from_file, create_client, solana_base_path
-import  solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
-from Toolchain.solana_module.anchor_module.interactive_data_insertion_dapp import (
+from Solana_module.solana_module.anchor_module.dapp_automatic_insertion_manager import  fetch_initialized_programs , build_table
+import Solana_module.solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
+from  Solana_module.solana_module.solana_utils import load_keypair_from_file, create_client, solana_base_path
+import  Solana_module.solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+from Solana_module.solana_module.anchor_module.interactive_data_insertion_dapp import (
     fetch_programs,
     load_idl_for_program,
     fetch_instructions_for_program,
@@ -104,9 +104,9 @@ selected_action = st.sidebar.radio(
     ("Manage Wallets","Upload new program", "Compile & Deploy", "Interactive Data Insertion", "Close programs","Execution Traces")
 )
 
-WALLETS_PATH = os.path.join(toolchain_path, "solana_module", "solana_wallets")
-ANCHOR_PROGRAMS_PATH = os.path.join(toolchain_path, "solana_module", "anchor_module", "anchor_programs")
-TRACES_PATH = os.path.join(toolchain_path, "solana_module", "anchor_module", "execution_traces")
+WALLETS_PATH = os.path.join(solana_path, "solana_module", "solana_wallets")
+ANCHOR_PROGRAMS_PATH = os.path.join(solana_path, "solana_module", "anchor_module", "anchor_programs")
+TRACES_PATH = os.path.join(solana_path, "solana_module", "anchor_module", "execution_traces")
 
 # ==============================
 # Main section

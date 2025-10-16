@@ -28,7 +28,8 @@ from web3 import Web3
 from eth_account import Account
 import secrets
 
-ethereum_base_path = os.path.join("Toolchain", "ethereum_module")
+# Base path now points to this package at repo root
+ethereum_base_path = os.path.join("ethereum_module")
 
 
 def run_command(operating_system, command_str):
