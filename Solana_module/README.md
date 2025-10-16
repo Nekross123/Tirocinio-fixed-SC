@@ -4,7 +4,7 @@
 **Degree Program**: Computer Engineering, Cybersecurity and Artificial Intelligence  
 **University**: Università degli Studi di Cagliari  
 **Thesis Title**: A toolchain for analyzing fees and transaction sizes on public blockchains: The case of Solana  
-**Author**: Manuel Boi  
+**Author**: Manuel Boi ,Palumbo Lorenzo and Piras Mauro
 **Supervisor**: Prof. Andrea Pinna
 
 ---

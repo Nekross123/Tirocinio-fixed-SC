@@ -34,30 +34,23 @@ from Solana_module.solana_module.anchor_module.transaction_manager import (
     send_transaction,
 )
 
-# ------------------------------------------------------------------
-# Async perchè Streamlit è considerato come "already running loop" e quindi non si può usare asyncio.run()
-# ------------------------------------------------------------------
 import nest_asyncio
 def _run_async(coro):
-    """Run an async """
+    """Run an async coroutine, even if a loop exists (applies nest_asyncio)."""
     try:
-        # Check if there's already a running loop (Streamlit case)
         loop = asyncio.get_running_loop()
-        # If we're here, there's a running loop. We need to use nest_asyncio or create new loop
         nest_asyncio.apply()
         return asyncio.run(coro)
     except RuntimeError:
-        # No running loop - just use asyncio.run like in CLI
         return asyncio.run(coro)
 
-
-# ------------------------------ Fetch  ------------------------------ #
-
 def fetch_programs() -> List[str]:
+    """Return initialized programs (for Streamlit dropdowns)."""
     return fetch_initialized_programs()
 
 
 def load_idl_for_program(program: str) -> dict:
+    """Load the IDL JSON for a given program from the local Anchor build."""
     idl_path = os.path.join(
         anchor_base_path,
         ".anchor_files",
@@ -73,11 +66,13 @@ def load_idl_for_program(program: str) -> dict:
 
 
 def fetch_instructions_for_program(program: str) -> List[str]:
+    """Extract instruction names from a program's IDL."""
     idl = load_idl_for_program(program)
     return fetch_program_instructions(idl)
 
 
 def fetch_program_context(program: str, instruction: str) -> Dict[str, Any]:
+    """Return IDL, required accounts, signer accounts, and args spec for UI."""
     idl = load_idl_for_program(program)
     required_accounts = fetch_required_accounts(instruction, idl)
     signer_accounts = fetch_signer_accounts(instruction, idl)
@@ -89,10 +84,8 @@ def fetch_program_context(program: str, instruction: str) -> Dict[str, Any]:
         'args_spec': args_spec,
     }
 
-
-# --------------------------- PDA / Account Helpers ------------------------ #
-
 def _program_id(program: str):
+    """Import generated program_id.py to get PROGRAM_ID dynamically."""
     module_path = os.path.join(
         anchor_base_path,
         '.anchor_files',
@@ -109,6 +102,7 @@ def _program_id(program: str):
 
 
 def _generate_pda_from_seeds(program: str, seeds_spec: List[Dict[str, Any]]) -> Pubkey:
+    """Derive a PDA using seed spec items (Wallet/Random/Manual)."""
     seeds_bytes = []
     for s in seeds_spec:
         mode = s['mode']
@@ -132,6 +126,7 @@ def _generate_pda_from_seeds(program: str, seeds_spec: List[Dict[str, Any]]) -> 
 
 
 def build_accounts(program: str, account_inputs: List[Dict[str, Any]], signer_accounts: List[str]):
+    """Build accounts dict and signer keypairs from Streamlit form data."""
     accounts_dict = {}
     signer_keypairs = {}
     wallets_dir = os.path.join(solana_base_path, 'solana_wallets')
@@ -166,6 +161,7 @@ def build_accounts(program: str, account_inputs: List[Dict[str, Any]], signer_ac
 
 
 def build_payees(payee_wallets: List[str]):
+    """Turn wallet names into payee account metas (non-signer, non-writable)."""
     wallets_dir = os.path.join(solana_base_path, 'solana_wallets')
     remaining_accounts = []
     seen = set()
@@ -183,10 +179,11 @@ def build_payees(payee_wallets: List[str]):
         })
     return remaining_accounts
 
-
-# ------------------------------ Args parsing ------------------------------ #
-
 def parse_args(args_spec: List[Dict[str, Any]], raw_arg_values: Dict[str, Any], instruction: str, remaining_accounts: List[Dict[str, Any]]):
+    """Parse and validate args from text inputs, handling arrays and vecs.
+
+    For initialize(shares_amounts), enforce count matches payees.
+    """
     final_args = {}
     for spec in args_spec:
         name = spec['name']
@@ -249,9 +246,6 @@ def parse_args(args_spec: List[Dict[str, Any]], raw_arg_values: Dict[str, Any], 
                 raise ValueError(f"Tipo non supportato: {kind}")
     return final_args
 
-
-# ------------------ Save Transaction Result ------------------ #
-
 def save_transaction_result(program: str,
                             instruction: str,
                             accounts: Dict[str, Any],
@@ -268,7 +262,6 @@ def save_transaction_result(program: str,
     file_name = f"{program}_results.json"
     file_path = os.path.join(results_folder, file_name)
     
-    # Format cluster with asterisk like automatic mode
     network_formatted = f"{cluster.lower()}*"
     
     result_data = {
@@ -292,8 +285,6 @@ def save_transaction_result(program: str,
     
     return file_name
 
-# ------------------ Build & (Optional) Send Transaction ------------------ #
-
 async def _build_and_send_internal(program: str,
                                    instruction: str,
                                    accounts: Dict[str, Any],
@@ -307,13 +298,11 @@ async def _build_and_send_internal(program: str,
     """Internal async function that creates client/provider and performs all async operations."""
     provider_kp = load_keypair_from_file(os.path.join(solana_base_path, 'solana_wallets', provider_wallet_file))
     
-    # Create client and provider INSIDE the async context
     client = create_client(cluster)
     provider_obj = Provider(client, Wallet(provider_kp))
     
     
     try:
-        # Build transaction
         tx = await build_transaction(
             program,
             instruction,
@@ -325,13 +314,10 @@ async def _build_and_send_internal(program: str,
             remaining_accounts if instruction == 'initialize' else None
         )
         
-        # Measure size (sync operation)
         size = measure_transaction_size(tx)
         
-        # Compute fees
         fees = await compute_transaction_fees(client, tx)
         
-        # Send if requested
         tx_hash = None
         if send_now and is_deployed:
             tx_hash = await send_transaction(provider_obj, tx)
@@ -345,7 +331,6 @@ async def _build_and_send_internal(program: str,
             'is_deployed': is_deployed,
         }
     finally:
-        # Clean up client connection
         await client.close()
 
 def build_and_optionally_send_transaction(program: str,
@@ -362,7 +347,6 @@ def build_and_optionally_send_transaction(program: str,
     
     cluster, is_deployed = fetch_cluster(program)
     
-    # Run everything in a single async context to ensure client/provider stay valid
     result = _run_async(_build_and_send_internal(
         program,
         instruction,
@@ -376,7 +360,6 @@ def build_and_optionally_send_transaction(program: str,
         is_deployed
     ))
     
-    # Save to JSON if transaction was sent
     if result['sent']:
         try:
             saved_file = save_transaction_result(
@@ -392,15 +375,9 @@ def build_and_optionally_send_transaction(program: str,
             )
             result['saved_file'] = saved_file
         except Exception as e:
-            # Don't fail the whole operation if saving fails
             result['saved_file'] = None
             result['save_error'] = str(e)
     
     return result
 
 
-# Backwards compatibility exports (minimal)
-choose_program_to_run = fetch_programs  # legacy name used elsewhere
-
-def _choose_instruction(program: str):  # legacy wrapper
-    return fetch_instructions_for_program(program)

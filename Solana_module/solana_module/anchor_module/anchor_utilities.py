@@ -31,12 +31,8 @@ from Solana_module.solana_module.anchor_module.anchor_utils import fetch_initial
     choose_instruction, check_if_array
 from Solana_module.solana_module.solana_utils import perform_program_closure
 
-
-# ====================================================
-# PUBLIC FUNCTIONS
-# ====================================================
-
 def get_initialized_programs():
+    """Print all initialized Anchor programs found in the local cache."""
     initialized_programs = fetch_initialized_programs()
     if len(initialized_programs) == 0:
         print("No program has been initialized yet.")
@@ -46,6 +42,7 @@ def get_initialized_programs():
             print(f"- {program}")
 
 def get_program_instructions():
+    """Show the list of instructions for a chosen program (from its IDL)."""
     chosen_program = choose_program()
     if not chosen_program:
         return
@@ -61,6 +58,7 @@ def get_program_instructions():
                 print(f"- {instruction}")
 
 def get_instruction_accounts():
+    """Show required accounts for a chosen instruction, marking signers."""
     chosen_program = choose_program()
     if not chosen_program:
         return
@@ -84,6 +82,7 @@ def get_instruction_accounts():
                         print(f"- {account}")
 
 def get_instruction_args():
+    """Show arguments for a chosen instruction, including array details."""
     chosen_program = choose_program()
     if not chosen_program:
         return
@@ -112,6 +111,7 @@ def get_instruction_args():
                         print(f"- {arg['name']} ({array_type} array of length {array_length})")
 
 def choose_program_for_pda_generation():
+    """Open a simple flow to derive and display a PDA for the chosen program."""
     repeat = True
     while repeat:
         chosen_program = choose_program()
@@ -123,6 +123,11 @@ def choose_program_for_pda_generation():
                 repeat = False
 
 def close_anchor_program():
+    """Close a deployed program with the Solana CLI and remove its cache.
+
+    We confirm with the user, then call 'solana program close'. On success,
+    we remove the program from the local .anchor_files cache so menus stay clean.
+    """
     chosen_program = choose_program()
     if not chosen_program:
         return
@@ -148,6 +153,7 @@ def close_anchor_program():
 
 
 def close_anchor_program_dapp(chosen_program):
+    """Programmatic variant of close_anchor_program used by the dapp UI."""
 
 
     cluster, wallet_name = _fetch_cluster_and_wallet(chosen_program)
@@ -168,6 +174,7 @@ def close_anchor_program_dapp(chosen_program):
         return {"success": False, "error": "Error during program closure: " + str(result.stderr)}
 
 def remove_anchor_program():
+    """Remove a program from the local toolchain cache (no on-chain action)."""
     chosen_program = choose_program()
     if not chosen_program:
         return
@@ -185,18 +192,11 @@ def remove_anchor_program():
         else:
             print('Please insert a valid choice.')
 
-
-
-
-# ====================================================
-# PRIVATE FUNCTIONS
-# ====================================================
-
 def _fetch_cluster_and_wallet(program_name):
+    """Read cluster and wallet path from the program's Anchor.toml."""
     file_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/Anchor.toml"
     config = toml.load(file_path)
 
-    # Edit values
     cluster = config['provider']['cluster']
     wallet_path = config['provider']['wallet']
     if wallet_path is None:
@@ -205,38 +205,38 @@ def _fetch_cluster_and_wallet(program_name):
     return cluster, wallet_name
 
 def _get_program_id(program_name):
-    # Update absolute path in the root folder of the package
+    """Dynamically import the generated PROGRAM_ID for a given program.
+
+    We look into .anchor_files/<program>/anchorpy_files/program_id.py so we
+    can avoid hardcoding and always use the right deployed address.
+    """
     program_root = Path(f"{anchor_base_path}/.anchor_files/{program_name}").resolve()
 
     if not program_root.exists():
         raise FileNotFoundError(f"The folder {program_root} does not exist. Check program name")
 
-    # Path to program id
     module_path = program_root / "anchorpy_files" / "program_id.py"
 
     if not module_path.exists():
         raise FileNotFoundError(f"The file {module_path} does not exist. Verify instruction name.")
 
-    # Add program root to sys.path to enable relative imports
     if str(program_root) not in sys.path:
         sys.path.append(str(program_root))
 
-    # Complete name of the module to import
     module_name = f"anchorpy_files.program_id"
 
-    # Dynamic import of the module
     module = importlib.import_module(module_name)
 
-    # Verify that the function exists
     if not hasattr(module, 'PROGRAM_ID'):
         raise AttributeError(f"The module {module_name} does not contain the program id.")
 
     return getattr(module, "PROGRAM_ID")
 
 def _remove_initialized_program(program_name):
+    """Delete the .anchor_files folder for a program (local cleanup)."""
     folder_to_remove = f"{anchor_base_path}/.anchor_files/{program_name}"
 
-    if os.path.exists(folder_to_remove):  # Check if folder exists
+    if os.path.exists(folder_to_remove):
         shutil.rmtree(folder_to_remove)
         print("Program removed from toolchain.")
     else:

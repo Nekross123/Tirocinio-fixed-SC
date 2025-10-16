@@ -1,7 +1,7 @@
 import streamlit as st
-import pandas as pd
 import json
 from io import StringIO
+import pandas as pd
 import os
 import re
 import asyncio
@@ -9,25 +9,21 @@ from solders.pubkey import Pubkey
 from anchorpy import Wallet, Provider
 from Solana_module.solana_module.anchor_module.transaction_manager import build_transaction, measure_transaction_size, \
     compute_transaction_fees, send_transaction
-from Solana_module.solana_module.solana_utils import load_keypair_from_file, solana_base_path, create_client, selection_menu
+from Solana_module.solana_module.solana_utils import load_keypair_from_file, solana_base_path, create_client
 from Solana_module.solana_module.anchor_module.anchor_utils import anchor_base_path, fetch_initialized_programs, \
     fetch_program_instructions, fetch_required_accounts, fetch_signer_accounts, fetch_args, check_type, convert_type, \
     fetch_cluster, load_idl, check_if_array , check_if_vec , bind_actors , is_pda  , generate_pda_automatically , find_sol_arg , \
     get_network_from_client , find_args ,is_wallet
 
-from spl.token.async_client import AsyncToken
-from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
-from solders.pubkey import Pubkey as SoldersPubkey
 from solana.rpc.async_api import AsyncClient
 
-# ====================================================
-# PUBLIC FUNCTIONS
-# ====================================================
-
-
-
 async def run_execution_trace(file_name):
-    """Run automatic execution trace with minimal UI feedback."""
+    """Run automatic JSON execution trace with minimal Streamlit feedback.
+
+    Reads a JSON trace, resolves wallets/PDAs/args, optionally waits for slots,
+    builds the transaction, computes size/fees, optionally sends, and collects
+    results to display and allow download.
+    """
     
     # Create placeholder for status message
     status_placeholder = st.empty()
@@ -57,14 +53,11 @@ async def run_execution_trace(file_name):
         status_placeholder.error("❌ Failed to bind actors to wallets")
         return
 
-    # Create async client outside the loop
     client = AsyncClient("https://api.devnet.solana.com")
-    #search fotr the network
     network = get_network_from_client(client)
     program_name = json_file["trace_title"]
 
     try:
-        # For each execution trace
         for trace in json_file["trace_execution"]:
 
             args = find_args(trace)
@@ -83,8 +76,6 @@ async def run_execution_trace(file_name):
             program_name = json_file["trace_title"]
 
 
-            # Manage instruction
-
             idl_file_path = f'{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/target/idl/{program_name}.json'
             idl = load_idl(idl_file_path)
             instructions = fetch_program_instructions(idl)
@@ -93,16 +84,12 @@ async def run_execution_trace(file_name):
             if instruction not in instructions:
                 print(f"Instruction {instruction} not found for the program {program_name} (execution trace {trace_id}).")
 
-            # Manage accounts
-            
-
             required_accounts = fetch_required_accounts(instruction, idl)
             signer_accounts = fetch_signer_accounts(instruction, idl)
             final_accounts = dict()
             signer_accounts_keypairs = dict()
             
 
-            #manage timer 
             extracted_key = trace["waiting_time"]
             if extracted_key > 0:
 
@@ -134,15 +121,10 @@ async def run_execution_trace(file_name):
 
 
 
-            # Initialize remaining accounts list
             remaining_accounts = []
             
             for account in required_accounts:
-                # Process each required account
-
-
-
-                                # If it is a PDA
+                # PDA account
                 if is_pda(complete_dict[account]):
                     
                     try:
@@ -189,14 +171,12 @@ async def run_execution_trace(file_name):
 
                 
 
-            # Manage args
             required_args = fetch_args(instruction, idl)
             final_args = dict()
             for arg in required_args:
 
                 print(f"Processing argument: {arg}")                                                                                                                                                                                                                                                                                                                                                                                                                                                
                 
-                # Manage arrays
                 array_type, array_length = check_if_array(arg)
                 vec_type = check_if_vec(arg)
                 if array_type is not None and array_length is not None:
@@ -205,12 +185,10 @@ async def run_execution_trace(file_name):
 
                     array_values = complete_dict[arg["name"]].split()
 
-                    # Check if array has correct length
                     if len(array_values) != array_length:
                         print(f"Error: Expected array of length {array_length}, but got {len(array_values)}")
                         return
 
-                    # Convert array elements basing on the type
                     valid_values = []
                     for j in range(len(array_values)):
                         converted_value = convert_type(array_type, array_values[j])
@@ -221,15 +199,12 @@ async def run_execution_trace(file_name):
                             return
 
                     final_args[arg['name']] = valid_values
-                #vectors handling
                 elif vec_type is not None:
                     vec_values = complete_dict[arg].split()
-                    #check if vec has more than zero 
                     if len(vec_values) == 0:
                         print("vec cannot have zero elements")
                         return
                     
-                    # Convert vec elements basing on the type
                     valid_values = []
                     for j in range(len(vec_values)):
                         converted_value = convert_type(vec_type, vec_values[j])
@@ -241,7 +216,6 @@ async def run_execution_trace(file_name):
 
                     final_args[arg['name']] = valid_values
 
-                # Manage classical args
                 else:
 
                     type = check_type(arg["type"])
@@ -263,7 +237,6 @@ async def run_execution_trace(file_name):
 
                 
 
-            # Manage provider
             try :
                 provider_keypair_path = f"{solana_base_path}/solana_wallets/{complete_dict[complete_dict["provider_wallet"]]}"
                 keypair = load_keypair_from_file(provider_keypair_path)
@@ -290,8 +263,6 @@ async def run_execution_trace(file_name):
             size = measure_transaction_size(transaction)
             fees = await compute_transaction_fees(client_for_transaction, transaction)
 
-            # json building
-
             if str(complete_dict["send_transaction"]).lower() == 'true':
                 if is_deployed:
                     transaction_hash = await send_transaction(provider, transaction)
@@ -308,13 +279,11 @@ async def run_execution_trace(file_name):
                             
                         }
 
-            # Append results
             results.append(json_action)
 
     finally:
         await client.close()
 
-    # Write results
     file_name_without_extension = file_name.removesuffix(".json")
     file_path,final = _write_json(file_name_without_extension, results, network)
     
@@ -328,6 +297,7 @@ async def run_execution_trace(file_name):
 # ====================================================
 
 def _find_execution_traces():
+    """List all JSON trace files available under execution_traces folder."""
     path = f"{anchor_base_path}/execution_traces/"
     if not os.path.exists(path):
         print(f"Error: Folder '{path}' does not exist.")
@@ -339,6 +309,7 @@ def _find_execution_traces():
 
 
 def _read_json(file_path):
+    """Safely read and parse a JSON file; return dict or None on error."""
     if os.path.exists(file_path):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -360,6 +331,7 @@ def _read_json(file_path):
         return None
 
 def _write_json(file_name, results , network):
+    """Write final results JSON under execution_traces_results and return path+object."""
     folder = f'{anchor_base_path}/execution_traces_results/'
     json_file = os.path.join(folder, f'{file_name}_results.json')
 
@@ -380,6 +352,7 @@ def _write_json(file_name, results , network):
 
 
 def build_table(data):
+    """Render a vertical, readable summary table in Streamlit with downloads."""
     results = data["results_file"]
     actions = results["actions"]
     
