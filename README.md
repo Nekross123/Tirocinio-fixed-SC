@@ -3,7 +3,7 @@
 Benvenuto/a in Rosetta_SC! Questo progetto raccoglie (in un unico posto) tre toolchain per smart contract che puoi usare da un'unica interfaccia: Solana, Tezos ed Ethereum (EVM). È pensato per sperimentare, compilare, fare deploy e interagire con contratti in unico posto.
 
 
-##Contenuto
+## Contenuto
 
 - Solana (cartella `Solana_module/solana_module`)
   - Compilazione e deploy di programmi Anchor
