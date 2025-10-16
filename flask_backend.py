@@ -118,6 +118,12 @@ def compile_deploy():
 @app.route("/automatic_data_insertion", methods=["POST"])
 def automatic_data_insertion():
     selected_trace_file = request.json.get("trace_file")
+    print(f"DEBUG: Received trace file request: {selected_trace_file}")
+    print(f"DEBUG: Full request JSON: {request.json}")
+    
+    if not selected_trace_file:
+        print("DEBUG: No trace file specified in request")
+        return jsonify({"success": False, "error": "No trace file specified"}), 400
     
     # Determina il tipo di blockchain basato sull'estensione del file
     if selected_trace_file.endswith('.json'):
