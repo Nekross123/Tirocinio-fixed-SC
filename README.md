@@ -15,7 +15,7 @@ Benvenuto/a in Rosetta_SC! Questo progetto raccoglie (in un unico posto) tre too
   - Gestione wallet Tezos (Ghostnet)
 - Ethereum (cartella `ethereum_module/`)
   - Compilazione con `py-solc-x` e deploy via web3.py
-  - Interazione con funzioni/ABI, meta-transazioni (stile progetto universitario)
+  - Interazione con funzioni/ABI, meta-transazioni 
   - Gestione wallet EVM
 - Backend Flask (`flask_backend.py`) e UI in Streamlit (`pages/*.py`, `Rosetta_SC.py`)
 

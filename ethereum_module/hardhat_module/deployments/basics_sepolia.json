@@ -1,0 +1,53 @@
+{
+  "contract_name": "basics",
+  "address": "0x93959BDcea5EcF0EDC843ef9096e61A72aFBae32",
+  "transaction_hash": "ee9ad7baa39f74f64958710403350b39664fbf04d92828e5eda482a53784a3ba",
+  "network": "sepolia",
+  "deployed_at": 1760517372.1856666,
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "myValue",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "numWriting",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "_valore",
+          "type": "uint16"
+        }
+      ],
+      "name": "writeValue",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
