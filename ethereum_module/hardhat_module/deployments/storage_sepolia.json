@@ -1,0 +1,61 @@
+{
+  "contract_name": "storage",
+  "address": "0xCAfb619df2f5D2629C59e20C351d129025cE6ED1",
+  "transaction_hash": "0x2123f2a147b3209b3978207f96d4b15f45f54c92d10941a0ec8b5e4a48ce6e99",
+  "network": "sepolia",
+  "deployed_at": 1760736035.6014311,
+  "abi": [
+    {
+      "inputs": [],
+      "name": "byteSequence",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "_byteSequence",
+          "type": "bytes"
+        }
+      ],
+      "name": "storeBytes",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_textString",
+          "type": "string"
+        }
+      ],
+      "name": "storeString",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "textString",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}

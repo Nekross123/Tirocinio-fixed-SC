@@ -19,6 +19,14 @@ try:
         load_abi_for_contract,
         fetch_functions_for_contract,
         fetch_contract_context,
+        format_function_info,
+        interact_with_contract
+    )
+    from ethereum_module.streamlit_interactive import run_interactive_contract_interface
+    from ethereum_module.streamlit_constructor_interface import (
+        collect_constructor_args_streamlit,
+        display_constructor_preview,
+        validate_constructor_args
     )
 except ImportError as e:
     st.error(f"Ethereum modules not found. Please ensure the Toolchain is properly set up: {e}")
@@ -75,8 +83,8 @@ st.title("⚡ Ethereum Toolchain")
 # ==============================
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
-    "Choose an action:",
-    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive Contract Interaction")
+    "Select Action",
+    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Guided Contract Interaction")
 )
 
 WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
@@ -179,11 +187,51 @@ elif selected_action == "Compile & Deploy":
         st.markdown("----")
         deploy_flag = st.checkbox("Also deploy after compilation", value=True)
 
+        # Constructor Parameters Section (only for single contract deployment)
+        constructor_args = []
+        constructor_valid = True
+        
+        if deploy_flag and compile_mode == "Single contract" and selected_contract_file != "--":
+            st.markdown("### 🔧 Constructor Parameters")
+            
+            # Try to compile contract to get ABI and check constructor parameters
+            try:
+                from ethereum_module.hardhat_module.compiler_and_deployer import _compile_contract
+                contract_name = selected_contract_file.replace('.sol', '')
+                contracts_path = os.path.join(root_path, "ethereum_module", "hardhat_module", "contracts")
+                contract_file_path = os.path.join(contracts_path, selected_contract_file)
+                
+                if os.path.exists(contract_file_path):
+                    with open(contract_file_path, 'r', encoding='utf-8') as f:
+                        source_code = f.read()
+                    
+                    compiled_data = _compile_contract(contract_name, source_code)
+                    
+                    if compiled_data and 'abi' in compiled_data:
+                        # Show constructor parameter preview
+                        display_constructor_preview(contract_name, compiled_data['abi'])
+                        
+                        # Collect constructor arguments if needed
+                        constructor_args = collect_constructor_args_streamlit(contract_name, compiled_data['abi'])
+                        constructor_valid = constructor_args is not None
+                        
+                        if constructor_args:
+                            # Store in session state for deployment
+                            st.session_state[f'constructor_args_{contract_name}'] = constructor_args
+                    else:
+                        st.warning("⚠️ Could not compile contract to detect constructor parameters. Using defaults.")
+                        
+            except Exception as e:
+                st.warning(f"⚠️ Could not analyze constructor parameters: {str(e)}")
+
         # Button conditions
         if compile_mode == "All contracts":
             can_proceed = selected_wallet_file != "--" and selected_network != "--" and len(contract_files) > 0
         else:
-            can_proceed = selected_wallet_file != "--" and selected_contract_file != "--" and selected_network != "--"
+            can_proceed = (selected_wallet_file != "--" and 
+                          selected_contract_file != "--" and 
+                          selected_network != "--" and 
+                          (not deploy_flag or constructor_valid))
 
         if can_proceed and st.button("Compile & Deploy"):
             if compile_mode == "Single contract":
@@ -252,6 +300,12 @@ elif selected_action == "Compile & Deploy":
                     # Add single_contract parameter if in single contract mode
                     if compile_mode == "Single contract":
                         deploy_payload["single_contract"] = selected_contract_file
+                        
+                        # Add constructor arguments if available
+                        contract_name = selected_contract_file.replace('.sol', '')
+                        constructor_key = f'constructor_args_{contract_name}'
+                        if constructor_key in st.session_state:
+                            deploy_payload["constructor_args"] = st.session_state[constructor_key]
                         
                     deploy_res = requests.post(
                         "http://127.0.0.1:5000/eth_compile_deploy",
@@ -370,191 +424,232 @@ elif selected_action == "Compile & Deploy":
                 else:
                     st.warning("⚠️ Compilation completed with some failures")
 
-elif selected_action == "Interactive Contract Interaction":
-    st.caption("Select a deployed contract and interact with its functions.")
-
+elif selected_action == "Guided Contract Interaction":
+    st.caption("Interactive guided interface for smart contract functions.")
+    
     try:
-        contracts = fetch_deployed_contracts()
+        from ethereum_module.streamlit_interactive import StreamlitInteractiveInterface
+        
+        # Create interactive interface
+        interface = StreamlitInteractiveInterface()
+        
+        # Get available contracts
+        contracts = interface.get_available_contracts()
+        
         if not contracts:
-            st.warning("No contracts deployed yet, please compile and deploy a contract first")
+            st.warning("No contracts deployed yet. Please compile and deploy a contract first.")
         else:
-            contract = st.selectbox("Contract", ["--"] + contracts)
-
-            abi = None
-            functions = []
-            if contract != "--":
-                try:
-                    abi = load_abi_for_contract(contract)
-                    functions = fetch_functions_for_contract(contract)
-                except FileNotFoundError as e:
-                    st.error(str(e))
-
-            function_name = st.selectbox("Function", ["--"] + functions) if contract != "--" else "--"
-
-            if contract == "--":
-                st.info("Select a contract.")
-            elif function_name == "--":
-                st.info("Select a function.")
-            else:
-                ctx = fetch_contract_context(contract, function_name)
-                inputs = ctx['inputs']
-                is_payable = ctx['is_payable']
-                is_view = ctx['is_view']
+            # Network selection at the beginning
+            st.markdown("### Network Selection")
+            available_networks = ["sepolia", "localhost", "goerli", "mainnet"]
+            
+            selected_network = st.selectbox(
+                "Select Network",
+                available_networks,
+                index=0,  # Default to sepolia
+                help="Choose the blockchain network to interact with"
+            )
+            
+            st.markdown("---")
+            
+            # Contract selection
+            contract_id = st.selectbox(
+                "Select Contract",
+                ["--"] + contracts,
+                help="Choose a deployed contract to interact with"
+            )
+            
+            if contract_id != "--":
+                # Show contract info
+                contract_info = interface.get_contract_info(contract_id)
                 
-                wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith('.json')]
-
-                st.markdown("---")
-                st.markdown("### Parameters")
-
-                # Form for function parameters + submit
-                with st.form("interact_contract_form"):
-                    
-                    # Function inputs
-                    param_values = {}
-                    address_inputs = []
-                    
-                    if inputs:
-                        st.markdown("#### Function Parameters")
-                        for inp in inputs:
-                            param_name = inp['name']
-                            param_type = inp['type']
-                            
-                            if param_type == 'address':
-                                # Special handling for address parameters
-                                data = _render_address_block(param_name, param_type, wallet_files)
-                                address_inputs.append(data)
-                            elif param_type.startswith('uint') or param_type.startswith('int'):
-                                param_values[param_name] = st.text_input(
-                                    f"{param_name} ({param_type})", 
-                                    key=f"param_{param_name}",
-                                    placeholder="Enter number"
-                                )
-                            elif param_type == 'bool':
-                                param_values[param_name] = st.selectbox(
-                                    f"{param_name} (bool)", 
-                                    ["--", "true", "false"], 
-                                    key=f"param_{param_name}"
-                                )
-                            elif param_type == 'string':
-                                param_values[param_name] = st.text_input(
-                                    f"{param_name} (string)", 
-                                    key=f"param_{param_name}",
-                                    placeholder="Enter string"
-                                )
-                            elif param_type == 'bytes' or param_type.startswith('bytes'):
-                                param_values[param_name] = st.text_input(
-                                    f"{param_name} ({param_type})", 
-                                    key=f"param_{param_name}",
-                                    placeholder="0x..."
-                                )
-                            else:
-                                param_values[param_name] = st.text_input(
-                                    f"{param_name} ({param_type})", 
-                                    key=f"param_{param_name}",
-                                    help=f"Custom type: {param_type}"
-                                )
-                    
-                    # Value field for payable functions
-                    value_eth = "0"
-                    if is_payable:
-                        st.markdown("#### Ether Value")
-                        value_eth = st.text_input(
-                            "Value (ETH)", 
-                            value="0",
-                            key="value_eth",
-                            help="Amount of Ether to send with the transaction"
-                        )
-                    
-                    # Caller wallet
-                    st.markdown("#### Transaction Sender")
-                    caller_wallet = st.selectbox(
-                        "Caller wallet", 
-                        ["--"] + wallet_files, 
-                        key="caller_wallet"
-                    )
-                    
-                    # Gas settings
-                    st.markdown("#### Gas Settings")
+                with st.expander("Contract Information"):
                     col1, col2 = st.columns(2)
                     with col1:
-                        gas_limit = st.text_input(
-                            "Gas Limit", 
-                            value="300000",
-                            key="gas_limit"
-                        )
+                        st.write(f"**Address:** `{contract_info['address']}`")
+                        st.write(f"**Network:** {contract_info['network']}")
                     with col2:
-                        gas_price = st.text_input(
-                            "Gas Price (Gwei)", 
-                            value="20",
-                            key="gas_price"
-                        )
-                    
-                    if is_view:
-                        submit_text = "Call (Read-only)"
-                    else:
-                        submit_text = "Send Transaction"
-                    
-                    submitted = st.form_submit_button(submit_text, type="primary")
-
-                # Handle form submission
-                if submitted:
-                    result_placeholder = st.empty()
-                    try:
-                        result_placeholder.info("Processing transaction...")
-
-                        # Prepare payload for Flask backend
-                        payload = {
-                            "contract": contract,
-                            "function_name": function_name,
-                            "param_values": param_values,
-                            "address_inputs": address_inputs,
-                            "value_eth": value_eth,
-                            "caller_wallet": caller_wallet,
-                            "gas_limit": gas_limit,
-                            "gas_price": gas_price,
-                            "is_view": is_view
-                        }
-
-                        # Call Flask backend
-                        response = requests.post(
-                            "http://127.0.0.1:5000/eth_interact_contract",
-                            json=payload
-                        )
-
-                        if response.status_code != 200:
-                            error_data = response.json()
-                            result_placeholder.error(f"Error: {error_data.get('error', 'Unknown error')}")
+                        st.write(f"**Deployed:** {contract_info.get('deployed_at', 'N/A')}")
+                        if contract_info.get('transaction_hash'):
+                            st.write(f"**Transaction:** `{contract_info['transaction_hash'][:20]}...`")
                         else:
-                            response_data = response.json()
-                            if not response_data.get("success"):
-                                result_placeholder.error(f"Error: {response_data.get('error', 'Unknown error')}")
-                            else:
-                                result = response_data["result"]
-
-                                # Display results
-                                st.markdown("---")
-                                st.subheader("Result")
-                                
-                                if is_view:
-                                    result_placeholder.success("✅ Function call completed!")
-                                    st.write(f"**Return value:** {result.get('return_value', 'N/A')}")
-                                else:
-                                    if result.get('transaction_hash'):
-                                        result_placeholder.success("✅ Transaction sent successfully!")
-                                        st.write(f"**Transaction Hash:** {result['transaction_hash']}")
-                                        st.write(f"**Gas Used:** {result.get('gas_used', 'N/A')}")
-                                        st.write(f"**Status:** {result.get('status', 'N/A')}")
-                                    else:
-                                        result_placeholder.error("❌ Transaction failed")
-
-                    except requests.exceptions.RequestException as e:
-                        result_placeholder.error(f"Backend connection error: {e}")
-                    except Exception as e:
-                        result_placeholder.error(f"Error: {e}")
+                            st.write("**Transaction:** N/A")
+                
+                # Show network info
+                contract_network = contract_info['network']
+                if contract_network:
+                    st.info(f"This contract is deployed on **{contract_network}** network. Make sure to select the same network for interaction.")
+                
+                # Get interaction functions
+                functions = fetch_functions_for_contract(contract_id)
+                function_names = [f['name'] for f in functions]
+                
+                if not functions:
+                    st.warning("No interaction functions available for this contract.")
+                else:
+                    # Function selection
+                    function_name = st.selectbox(
+                        "Select Function",
+                        ["--"] + function_names,
+                        help="Choose a function to interact with"
+                    )
+                    
+                    if function_name != "--":
+                        # Show function guidance
+                        guidance = interface.get_function_guidance(contract_id, function_name)
                         
+                        st.markdown("---")
+                        st.markdown(f"### Function: `{function_name}()`")
+                        
+                        # Parameters form
+                        with st.form(key=f"interact_{function_name}_form"):
+                            param_values = {}
+                            address_inputs = []
+                            
+                            # Function parameters
+                            if guidance['parameters']:
+                                st.markdown("#### Function Parameters")
+                                
+                                for param in guidance['parameters']:
+                                    st.markdown(f"**{param['name']}** ({param['type']})")
+                                    
+                                    if param['type'] == 'address':
+                                        # Address parameter handling
+                                        method = st.selectbox(
+                                            f"Method for {param['name']}",
+                                            ["Wallet Address", "Manual Address", "Contract Address"],
+                                            key=f"method_{param['name']}"
+                                        )
+                                        
+                                        addr_data = {"name": param['name'], "method": method}
+                                        
+                                        if method == "Wallet Address":
+                                            wallet_files = [f for f in os.listdir("ethereum_module/ethereum_wallets") if f.endswith('.json')]
+                                            addr_data['wallet'] = st.selectbox(
+                                                f"Wallet for {param['name']}",
+                                                ["--"] + wallet_files,
+                                                key=f"wallet_{param['name']}"
+                                            )
+                                        elif method == "Manual Address":
+                                            addr_data['address_manual'] = st.text_input(
+                                                f"Address for {param['name']}",
+                                                placeholder="0x...",
+                                                key=f"manual_{param['name']}"
+                                            )
+                                        else:  # Contract Address
+                                            addr_data['contract'] = st.selectbox(
+                                                f"Contract for {param['name']}",
+                                                ["--"] + contracts,
+                                                key=f"contract_{param['name']}"
+                                            )
+                                        
+                                        address_inputs.append(addr_data)
+                                        
+                                    elif param['type'].startswith('uint') or param['type'].startswith('int'):
+                                        param_values[param['name']] = st.text_input(
+                                            f"Value",
+                                            placeholder=f"Enter {param['type']} value",
+                                            key=f"param_{param['name']}"
+                                        )
+                                    elif param['type'] == 'string':
+                                        param_values[param['name']] = st.text_input(
+                                            f"Value",
+                                            placeholder="Enter string value",
+                                            key=f"param_{param['name']}"
+                                        )
+                                    elif param['type'] == 'bool':
+                                        param_values[param['name']] = st.selectbox(
+                                            f"Value",
+                                            ["--", "true", "false"],
+                                            key=f"param_{param['name']}"
+                                        )
+                                    else:
+                                        param_values[param['name']] = st.text_input(
+                                            f"Value ({param['type']})",
+                                            key=f"param_{param['name']}"
+                                        )
+                                    
+                                    st.markdown("---")
+                            
+                            # ETH Value for payable functions
+                            value_eth = "0"
+                            if guidance['is_payable']:
+                                st.markdown("#### Ether Value")
+                                value_eth = st.text_input(
+                                    "ETH Amount",
+                                    value="0",
+                                    placeholder="0.1",
+                                    help="Amount of ETH to send with the transaction",
+                                    key="value_eth"
+                                )
+                            
+                            # Transaction settings
+                            st.markdown("#### Transaction Settings")
+                            
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                wallet_files = [f for f in os.listdir("ethereum_module/ethereum_wallets") if f.endswith('.json')]
+                                caller_wallet = st.selectbox(
+                                    "Sender Wallet",
+                                    ["--"] + wallet_files,
+                                    help="Wallet that will send the transaction",
+                                    key="caller_wallet"
+                                )
+                            
+                            with col2:
+                                gas_limit = st.text_input(
+                                    "Gas Limit",
+                                    value="300000",
+                                    help="Maximum gas for the transaction",
+                                    key="gas_limit"
+                                )
+                            
+                            # Submit button
+                            submit_button = st.form_submit_button(
+                                f"Execute {function_name}()",
+                                help=f"Send transaction to execute {function_name}"
+                            )
+                            
+                            if submit_button:
+                                # Validate inputs
+                                if caller_wallet == "--":
+                                    st.error("Please select a sender wallet")
+                                else:
+                                    # Execute transaction
+                                    with st.spinner(f"Executing {function_name}..."):
+                                        try:
+                                            result = interact_with_contract(
+                                                contract_deployment_id=contract_id,
+                                                function_name=function_name,
+                                                param_values=param_values,
+                                                address_inputs=address_inputs,
+                                                value_eth=value_eth,
+                                                caller_wallet=caller_wallet,
+                                                gas_limit=int(gas_limit),
+                                                gas_price=20,  # Default gas price
+                                                network=selected_network
+                                            )
+                                            
+                                            if result['success']:
+                                                st.success(f"{function_name}() executed successfully!")
+                                                
+                                                if not result.get('is_view', False):
+                                                    st.info(f"**Transaction Hash:** `{result['transaction_hash']}`")
+                                                    st.info(f"**Gas Used:** {result['gas_used']}")
+                                                else:
+                                                    st.info(f"**Return Value:** {result['return_value']}")
+                                            else:
+                                                st.error(f"Error: {result['error']}")
+                                                
+                                        except Exception as e:
+                                            st.error(f"Execution failed: {str(e)}")
+            else:
+                st.info("Please select a contract to start interacting.")
+    
+    except ImportError as e:
+        st.error(f"Interactive interface not available: {e}")
     except Exception as e:
-        st.error(f"Error loading contracts: {e}")
-
+        st.error(f"Error loading interactive interface: {e}")
 
 
 # ==============================

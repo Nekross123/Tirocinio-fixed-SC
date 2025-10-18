@@ -27,7 +27,8 @@ from eth_account import Account
 from ethereum_module.ethereum_utils import (
     create_web3_instance,
     load_wallet_from_file,
-    wait_for_transaction_receipt
+    wait_for_transaction_receipt,
+    get_default_network
 )
 from ethereum_module.hardhat_module.meta_transaction import metaTransaction
 
@@ -65,19 +66,61 @@ def load_abi_for_contract(contract_deployment_id):
 
 
 def fetch_functions_for_contract(contract_deployment_id):
-    """Fetch available functions for a deployed contract."""
+    """Fetch available INTERACTION functions for a deployed contract (excludes view/pure functions)."""
     try:
         abi = load_abi_for_contract(contract_deployment_id)
         functions = []
         
         for item in abi:
             if item.get('type') == 'function':
-                functions.append(item['name'])
+                # Only include functions that can modify state or receive Ether
+                state_mutability = item.get('stateMutability', 'nonpayable')
+                if state_mutability not in ['view', 'pure']:
+                    # Extract function info with parameters
+                    function_info = {
+                        'name': item['name'],
+                        'stateMutability': state_mutability,
+                        'inputs': item.get('inputs', []),
+                        'payable': state_mutability == 'payable'
+                    }
+                    functions.append(function_info)
         
         return functions
     except Exception as e:
         print(f"Error fetching functions: {e}")
         return []
+
+
+def format_function_info(function_info):
+    """Format function information for display."""
+    name = function_info['name']
+    inputs = function_info['inputs']
+    payable = function_info['payable']
+    
+    # Format parameters
+    params = []
+    for inp in inputs:
+        param_type = inp['type']
+        param_name = inp.get('name', 'param')
+        params.append(f"{param_type} {param_name}")
+    
+    params_str = ", ".join(params) if params else "no parameters"
+    payable_str = " [PAYABLE]" if payable else ""
+    
+    return f"{name}({params_str}){payable_str}"
+
+
+def get_interaction_functions_summary(contract_deployment_id):
+    """Get a formatted summary of interaction functions for a contract."""
+    functions = fetch_functions_for_contract(contract_deployment_id)
+    if not functions:
+        return "No interaction functions found."
+    
+    summary = f"📋 Interaction Functions for {contract_deployment_id}:\n"
+    for i, func in enumerate(functions, 1):
+        summary += f"{i}. {format_function_info(func)}\n"
+    
+    return summary
 
 
 def fetch_contract_context(contract_deployment_id, function_name):
@@ -206,8 +249,12 @@ def build_function_call_data(contract_deployment_id, function_name, param_values
 
 
 def interact_with_contract(contract_deployment_id, function_name, param_values, address_inputs,
-                          value_eth, caller_wallet, gas_limit, gas_price, network="localhost"):
+                          value_eth, caller_wallet, gas_limit, gas_price, network=None):
     """Interact with a deployed contract function."""
+    # Use global default network if none specified
+    if network is None:
+        network = get_default_network()
+        
     try:
         # Get deployment info
         deployment_info = get_deployment_info(contract_deployment_id)
@@ -279,8 +326,12 @@ def interact_with_contract(contract_deployment_id, function_name, param_values, 
         }
 
 
-def check_contract_deployment_status(contract_deployment_id, network="localhost"):
+def check_contract_deployment_status(contract_deployment_id, network=None):
     """Check if a contract is properly deployed and accessible."""
+    # Use global default network if none specified
+    if network is None:
+        network = get_default_network()
+        
     try:
         deployment_info = get_deployment_info(contract_deployment_id)
         contract_address = deployment_info['address']
@@ -298,8 +349,12 @@ def check_contract_deployment_status(contract_deployment_id, network="localhost"
         return False
 
 
-def get_contract_balance(contract_deployment_id, network="localhost"):
+def get_contract_balance(contract_deployment_id, network=None):
     """Get the ETH balance of a deployed contract."""
+    # Use global default network if none specified
+    if network is None:
+        network = get_default_network()
+        
     try:
         deployment_info = get_deployment_info(contract_deployment_id)
         contract_address = deployment_info['address']

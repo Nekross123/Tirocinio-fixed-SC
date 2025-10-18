@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Based on Prof. Andrea Pinna's approach from bcschool2023
+
 # This function simplifies the interaction with smart contracts
 # Following the same pattern used in the course materials
 

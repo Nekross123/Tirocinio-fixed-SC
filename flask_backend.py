@@ -347,13 +347,15 @@ def eth_compile_deploy():
     deploy_flag = request.json.get("deploy", True)
     network = request.json.get("network", "sepolia")
     single_contract = request.json.get("single_contract", None)
+    constructor_args = request.json.get("constructor_args", None)
     
     try:
         result = compile_and_deploy_contracts(
             wallet_name=wallet_file,
             network=network,
             deploy=deploy_flag,
-            single_contract=single_contract
+            single_contract=single_contract,
+            constructor_args=constructor_args
         )
         return jsonify(result)
     except Exception as e:

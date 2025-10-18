@@ -71,13 +71,115 @@ def _detect_solidity_version(source_code: str) -> str:
     return "0.8.19"  # Default version
 
 
+def _get_constructor_args(contract_name: str):
+    """Get constructor arguments based on contract name."""
+    # Define default constructor arguments for known contracts
+    constructor_defaults = {
+        "auction": ["Sample Auction Item", 100],  # _object, _startingBid
+        "Auction": ["Sample Auction Item", 100],  # Case variation
+        "CrowdFunding": [],  # No constructor args needed
+        "Escrow": [],  # Constructor typically has parameters but can use defaults
+        "Storage": [],  # Simple storage contract
+        "SimpleStorage": [],  # Simple storage contract
+        "basics": [],  # Empty constructor
+        # Add more contracts as needed
+    }
+    
+    # Return constructor args for known contracts, empty list for others
+    return constructor_defaults.get(contract_name, [])
+
+
+def _get_constructor_parameters_from_abi(abi_data):
+    """Extract constructor parameters from ABI."""
+    for item in abi_data:
+        if item.get('type') == 'constructor':
+            return item.get('inputs', [])
+    return []
+
+
+def _collect_constructor_args_interactive(contract_name: str, abi_data) -> list:
+    """Collect constructor arguments interactively from user."""
+    constructor_inputs = _get_constructor_parameters_from_abi(abi_data)
+    
+    if not constructor_inputs:
+        print(f"✅ Contract '{contract_name}' has no constructor parameters")
+        return []
+    
+    print(f"\n🔧 Constructor Parameters for '{contract_name}':")
+    print("=" * 50)
+    
+    args = []
+    for param in constructor_inputs:
+        param_name = param['name']
+        param_type = param['type']
+        
+        print(f"\nParameter: {param_name} ({param_type})")
+        
+        # Provide examples based on type
+        if param_type == 'string':
+            print("  Example: 'My Auction Item', 'Hello World'")
+        elif param_type.startswith('uint'):
+            print("  Example: 100, 1000, 50")
+        elif param_type == 'address':
+            print("  Example: 0x742d35Cc6641C93988D0Ac4C95a36D98C41A30Ee")
+        elif param_type == 'bool':
+            print("  Example: true, false")
+        
+        # Get user input
+        while True:
+            user_input = input(f"Enter value for {param_name}: ").strip()
+            
+            if not user_input:
+                print("❌ Value cannot be empty. Please try again.")
+                continue
+            
+            try:
+                # Convert based on type
+                if param_type == 'string':
+                    args.append(user_input)
+                elif param_type.startswith('uint') or param_type.startswith('int'):
+                    args.append(int(user_input))
+                elif param_type == 'bool':
+                    if user_input.lower() in ['true', 't', '1', 'yes', 'y']:
+                        args.append(True)
+                    elif user_input.lower() in ['false', 'f', '0', 'no', 'n']:
+                        args.append(False)
+                    else:
+                        print("❌ Invalid boolean. Use: true/false, t/f, 1/0, yes/no")
+                        continue
+                elif param_type == 'address':
+                    if user_input.startswith('0x') and len(user_input) == 42:
+                        args.append(user_input)
+                    else:
+                        print("❌ Invalid address format. Must start with 0x and be 42 characters long")
+                        continue
+                else:
+                    # For other types, use as string
+                    args.append(user_input)
+                
+                print(f"✅ Added: {param_name} = {args[-1]}")
+                break
+                
+            except ValueError:
+                print(f"❌ Invalid value for type {param_type}. Please try again.")
+    
+    print(f"\n✅ Constructor arguments collected: {args}")
+    return args
+
+
 # =====================================================
 # MAIN COMPILE AND DEPLOY FUNCTION
 # =====================================================
-def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None):
+def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None, constructor_args=None):
     """
     Compile and optionally deploy Solidity contracts.
-    Similar to the Solana version but adapted for Ethereum.
+    
+    Args:
+        wallet_name: Name of the wallet file to use for deployment
+        network: Target network (localhost, sepolia, etc.)
+        deploy: Whether to deploy contracts after compilation
+        single_contract: Name of a single contract to process (optional)
+        constructor_args: Constructor arguments for single contract deployment (optional)
     """
     results = []
     contracts_path = os.path.join(hardhat_base_path, "contracts")
@@ -120,11 +222,17 @@ def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=F
                 # Deploy if requested
                 if deploy:
                     if wallet_name:
+                        # Use provided constructor args for single contract deployment
+                        contract_constructor_args = None
+                        if single_contract and constructor_args:
+                            contract_constructor_args = constructor_args
+                        
                         deploy_result = _deploy_contract(
                             contract_name, 
                             compiled_data, 
                             wallet_name, 
-                            network
+                            network,
+                            contract_constructor_args
                         )
                         
                         if deploy_result["success"]:
@@ -238,7 +346,7 @@ def _save_contract_artifacts(contract_name, compiled_data, source_code):
         json.dump(bytecode_data, f, indent=2)
 
 
-def _deploy_contract(contract_name, compiled_data, wallet_name, network):
+def _deploy_contract(contract_name, compiled_data, wallet_name, network, constructor_args=None):
     """Deploy a compiled contract to the specified network."""
     try:
         # Load wallet
@@ -265,13 +373,32 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network):
         # Get nonce
         nonce = w3.eth.get_transaction_count(account.address)
 
+        # Get constructor parameters - use provided args or collect interactively
+        if constructor_args is None:
+            constructor_args = _collect_constructor_args_interactive(contract_name, contract_abi)
+        else:
+            # Validate provided constructor args
+            constructor_inputs = _get_constructor_parameters_from_abi(contract_abi)
+            if len(constructor_args) != len(constructor_inputs):
+                return {"success": False, "error": f"Expected {len(constructor_inputs)} constructor arguments, got {len(constructor_args)}"}
+            
+            print(f"✅ Using provided constructor arguments: {constructor_args}")
+
         # Build deployment transaction
-        transaction = contract.constructor().build_transaction({
-            'from': account.address,
-            'nonce': nonce,
-            'gas': 3000000,  # Default gas limit
-            'gasPrice': w3.eth.gas_price,
-        })
+        if constructor_args:
+            transaction = contract.constructor(*constructor_args).build_transaction({
+                'from': account.address,
+                'nonce': nonce,
+                'gas': 3000000,  # Default gas limit
+                'gasPrice': w3.eth.gas_price,
+            })
+        else:
+            transaction = contract.constructor().build_transaction({
+                'from': account.address,
+                'nonce': nonce,
+                'gas': 3000000,  # Default gas limit
+                'gasPrice': w3.eth.gas_price,
+            })
 
         # Sign transaction
         signed_txn = w3.eth.account.sign_transaction(transaction, wallet_data["private_key"])
