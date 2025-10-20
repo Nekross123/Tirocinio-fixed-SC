@@ -84,7 +84,7 @@ st.title("⚡ Ethereum Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Select Action",
-    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Guided Contract Interaction")
+    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion")
 )
 
 WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
@@ -424,17 +424,19 @@ elif selected_action == "Compile & Deploy":
                 else:
                     st.warning("⚠️ Compilation completed with some failures")
 
-elif selected_action == "Guided Contract Interaction":
+elif selected_action == "Interactive data insertion":
     st.caption("Interactive guided interface for smart contract functions.")
     
     try:
-        from ethereum_module.streamlit_interactive import StreamlitInteractiveInterface
-        
-        # Create interactive interface
-        interface = StreamlitInteractiveInterface()
+        from ethereum_module.streamlit_interactive import (
+            display_contract_selection,
+            display_function_selection,
+            get_available_contracts,
+            run_interactive_contract_interface
+        )
         
         # Get available contracts
-        contracts = interface.get_available_contracts()
+        contracts = get_available_contracts()
         
         if not contracts:
             st.warning("No contracts deployed yet. Please compile and deploy a contract first.")
@@ -461,7 +463,8 @@ elif selected_action == "Guided Contract Interaction":
             
             if contract_id != "--":
                 # Show contract info
-                contract_info = interface.get_contract_info(contract_id)
+                from ethereum_module.interactive_interface import get_contract_info
+                contract_info = get_contract_info(contract_id)
                 
                 with st.expander("Contract Information"):
                     col1, col2 = st.columns(2)
@@ -496,7 +499,8 @@ elif selected_action == "Guided Contract Interaction":
                     
                     if function_name != "--":
                         # Show function guidance
-                        guidance = interface.get_function_guidance(contract_id, function_name)
+                        from ethereum_module.interactive_interface import get_function_guidance
+                        guidance = get_function_guidance(contract_id, function_name)
                         
                         st.markdown("---")
                         st.markdown(f"### Function: `{function_name}()`")

@@ -101,7 +101,7 @@ st.title("🌞 Solana Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Choose an action:",
-    ("Manage Wallets","Upload new program", "Compile & Deploy", "Interactive Data Insertion", "Close programs","Execution Traces")
+    ("Manage Wallets","Upload new contract", "Compile & Deploy", "Interactive Data Insertion", "Close programs","Execution Traces")
 )
 
 WALLETS_PATH = os.path.join(solana_path, "solana_module", "solana_wallets")
@@ -132,7 +132,7 @@ if selected_action == "Manage Wallets":
         except requests.exceptions.RequestException as e:
             st.error(f"Backend connection error: {e}")
 
-elif selected_action == "Upload new program":
+elif selected_action == "Upload new contract":
     st.subheader("Upload Rust Program")
     
     uploaded_file = st.file_uploader(
