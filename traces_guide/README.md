@@ -22,18 +22,27 @@ Each item in trace_execution describes one action. Common fields are shared acro
 - function_name: string (required)
 	- Logical function/entrypoint name. 
 - waiting_time: number (required)
-	- Delay in seconds to wait before executing this step (0 if not needed).
+	- Delay in slots to wait before executing this step (0 if not needed).
 - actors: string[] (required)
-	- Subset of trace_actors participating in this step.
+	- Subset of trace_actors participating in this function.
 - args: object (required)
 	- Parameters for the logical function. Values should be JSON primitives or simple objects.
 - solana | evm | tezos | cardano: object (all optional, but typically present; empty object {} is valid)
 	- Chain-specific directives/overrides. Common optional keys across chains:
 		- provider_wallet: string — one of trace_actors, indicates who signs the transaction.
-		- send_transaction: boolean — if false, simulate/dry-run only (default true if omitted).
+		- send_transaction: boolean.
 	- Examples of chain-specific extras:
+
+   
 		- Solana: derived addresses/PDAs, e.g. user_wallet_pda, balance_holder_pda with special shorthand:
-			- { "opt": "s", "param": ["seedA", "seedB" | references like "recipient", "sender"] }
+			- 3 options available modifyinhg the field `"opt"` inside the pda dictionary  
+     			1."s" -> generates the PDA using the seeds (strings, wallet pubkeys, or PDA bytes) in the 					field `"param"` of the pda dictionary  
+     			2."r" -> generate a random-like address  
+     			3."p": insert a provided base58 address manually in the field `"param"`    
+     🛑 the names of seeds , pds's and actors must be the same of the corresponding contract variables
+   		
+     
+     			
 			- Additional fields like duration_slots, starting_bid, amount_to_deposit, transaction_lamports_amount.
 		- EVM: method (string), contract_name/address (string), value (wei, number), gas_limit, gas_price, args (object/array) to override global args.
 		- Tezos: entrypoint (string), parameters (object/string), mutez (number) or tezAmount, address/contract alias.
