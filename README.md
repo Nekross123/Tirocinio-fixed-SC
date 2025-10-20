@@ -1,6 +1,5 @@
 # Extendable toolchain for smart contract traces
 
-Welcome to Rosetta smart contract!
 This project brings together three **smart contract toolchains** — **Solana**, **Tezos**, and **Ethereum (EVM)** — into a single interface.
 It’s designed to let you **experiment, compile, deploy, and interact** with smart contracts all in one place.
 
