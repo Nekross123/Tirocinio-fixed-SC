@@ -1,120 +1,158 @@
 # Rosetta_SC
 
-Benvenuto/a in Rosetta_SC! Questo progetto raccoglie (in un unico posto) tre toolchain per smart contract che puoi usare da un'unica interfaccia: Solana, Tezos ed Ethereum (EVM). È pensato per sperimentare, compilare, fare deploy e interagire con contratti in unico posto.
-
-
-## Contenuto
-
-- Solana (cartella `Solana_module/solana_module`)
-  - Compilazione e deploy di programmi Anchor
-  - Inserimento dati automatico e interattivo
-  - Gestione wallet Solana (Devnet/Testnet/Mainnet)
-- Tezos (cartella `Tezos_module/` + wrapper in `Tezos_module/tezos_module`)
-  - Compilazione SmartPy, origination, chiamata entrypoint
-  - Esecuzione tracce da CSV
-  - Gestione wallet Tezos (Ghostnet)
-- Ethereum (cartella `ethereum_module/`)
-  - Compilazione con `py-solc-x` e deploy via web3.py
-  - Interazione con funzioni/ABI, meta-transazioni 
-  - Gestione wallet EVM
-- Backend Flask (`flask_backend.py`) e UI in Streamlit (`pages/*.py`, `Rosetta_SC.py`)
-
-La repo è organizzata per lavorare bene su Windows con WSL (Ubuntu). Se usi macOS/Linux nativo, cambia poco.
-
+Welcome to Rosetta_SC!
+This project brings together three **smart contract toolchains** — **Solana**, **Tezos**, and **Ethereum (EVM)** — into a single interface.
+It’s designed to let you **experiment, compile, deploy, and interact** with smart contracts all in one place.
 
 ---
 
-## Prerequisiti per toolchain
+## Contents
 
-Prima di avviare l’app, assicurati di avere questi requisiti. Le dipendenze vanno installate in WSL (Ubuntu) dentro il virtual environment del progetto.
+* **Solana** (`Solana_module/solana_module`)
 
-### Generali
-- WSL Ubuntu (consigliato 22.04+)
-- Python 3.12 e un venv attivo 
-- Pacchetti Python minimi: `streamlit`, `flask`, `python-dotenv`
+  * Anchor program compilation and deployment
+  * Automatic and interactive data insertion
+  * Solana wallet management (Devnet/Testnet/Mainnet)
+* **Tezos** (`Tezos_module/` + wrapper in `Tezos_module/tezos_module`)
+
+  * SmartPy compilation, origination, and entrypoint calls
+  * CSV-based execution traces
+  * Tezos wallet management (Ghostnet)
+* **Ethereum (EVM)** (`ethereum_module/`)
+
+  * Compilation via `py-solc-x` and deployment using `web3.py`
+  * ABI interaction, meta-transactions
+  * EVM wallet management
+* **Backend Flask** (`flask_backend.py`) and **Streamlit UI** (`pages/*.py`, `Rosetta_SC.py`)
+
+The repository is optimized for **Windows + WSL (Ubuntu)**.
+If you’re using native macOS or Linux, everything works nearly the same.
+
+---
+
+## Prerequisites
+
+Before running the app, make sure you meet the following requirements.
+All dependencies must be installed **inside your WSL Ubuntu virtual environment**.
+
+### General
+
+* WSL Ubuntu (recommended 22.04+)
+* Python 3.12 with an active virtual environment
+* Core Python packages: `streamlit`, `flask`, `python-dotenv`
+
+---
 
 ### Solana
-Per compilare e fare deploy dei programmi Anchor e usare le funzioni di interazione:
-- Rust toolchain (rustup/cargo)
-- Node.js 18+ e npm
-- Solana CLI (configurata su Devnet/Testnet/Mainnet)
-- Anchor CLI
-- Pacchetti Python: `anchorpy`, `solders`, `solana`, `toml`
-- Wallet in `Solana_module/solana_module/solana_wallets` (chiavi JSON)
-- Sorgenti Rust in `Solana_module/solana_module/anchor_module/anchor_programs`
-- Tracce in `Solana_module/solana_module/anchor_module/execution_traces` (se usi l’esecuzione automatica)
 
-Note: per test locali puoi usare `solana-test-validator` o Devnet con airdrop.
+To compile and deploy Anchor programs and use the interactive tools:
+
+* Rust toolchain (`rustup` / `cargo`)
+* Node.js 18+ and npm
+* Solana CLI (configured for Devnet/Testnet/Mainnet)
+* Anchor CLI
+* Python packages: `anchorpy`, `solders`, `solana`, `toml`
+* Wallets in `Solana_module/solana_module/solana_wallets` (JSON keypairs)
+* Rust sources in `Solana_module/solana_module/anchor_module/anchor_programs`
+* Execution traces in `Solana_module/solana_module/anchor_module/execution_traces` (for automated runs)
+
+Note: For local testing, use `solana-test-validator` or Devnet with airdrop.
+
+---
 
 ### Tezos
-Per compilare SmartPy, fare origination e interagire su Ghostnet:
-- Pacchetti Python: `pytezos`
-- SmartPy CLI installata (necessaria per la compilazione SmartPy → Michelson)
-- Wallet in `Tezos_module/tezos_module/tezos_wallets/wallet.json`
-- Tracce CSV in `Tezos_module/toolchain/execution_traces/*.csv` (per Execute Trace)
+
+To compile SmartPy contracts, originate them, and interact on Ghostnet:
+
+* Python package: `pytezos`
+* SmartPy CLI (required to compile SmartPy → Michelson)
+* Wallet in `Tezos_module/tezos_module/tezos_wallets/wallet.json`
+* CSV traces in `Tezos_module/toolchain/execution_traces/*.csv` (for trace execution)
+
+---
 
 ### Ethereum (EVM)
-Per compilare con py-solc-x, fare deploy e interagire:
-- Pacchetti Python: `web3`, `py-solc-x`, `eth-account`
-- Nodo locale per i test: Ganache CLI oppure Hardhat node
-- (Opzionale per testnet/mainnet) account/endpoint: variabile `INFURA_PROJECT_ID`
-- Consigliato preinstallare `solc` 0.8.18 tramite `py-solc-x`
-- Contratti in `ethereum_module/hardhat_module/contracts/*.sol`, artifacts e deployments nelle relative cartelle
-- Wallet in `ethereum_module/ethereum_wallets/*.json`
 
-Se mancano dipendenze Python, installale nel venv del progetto. Per Solana/Anchor segui la documentazione ufficiale di Anchor e Solana CLI per l’installazione.
+For compilation, deployment, and interaction:
 
----
+* Python packages: `web3`, `py-solc-x`, `eth-account`
+* Local node: Ganache CLI or Hardhat node
+* (Optional for testnet/mainnet): environment variable `INFURA_PROJECT_ID`
+* Recommended compiler: `solc` 0.8.18 via `py-solc-x`
+* Contracts in `ethereum_module/hardhat_module/contracts/*.sol`
+* Artifacts and deployments in their respective folders
+* Wallets in `ethereum_module/ethereum_wallets/*.json`
 
-
-##  Avvio applicazione
-
-Apri due terminali (o schede) con il venv attivo:
-
-1) Backend Flask (python flask_backend.py)
-
-2) UI Streamlit (streamlit run Rosetta_SC.py)
-
-3) premi sul link nel terminale per aprire l'interfaccia web
+If any Python dependencies are missing, install them in your venv.
+For Solana/Anchor, follow the official CLI installation guides.
 
 ---
 
-##  Come usare le toolchain
+## Running the Application
+
+Open **two terminal windows (or tabs)** with your venv activated:
+
+1. Start Flask backend:
+   `python flask_backend.py`
+
+2. Start Streamlit UI:
+   `streamlit run Rosetta_SC.py`
+
+3. Click the link displayed in the terminal to open the web interface.
+
+---
+
+## Using the Toolchains
 
 ### Solana
-- Inseri qui i tuoi Wallet: file JSON in `Solana_module/solana_module/solana_wallets`
-- Inseri qui i tuoi Programmi Rust(SC): sorgenti Rust in `Solana_module/solana_module/anchor_module/anchor_programs`
-- Inseri qui le tue Tracce automatiche: JSON in `Solana_module/solana_module/anchor_module/execution_traces`
 
-ATTENZIONE: per versioni e dipendenze esatte, vedi i file requirements nelle cartelle della toolchain:
-- `Solana_module/solana_module/requirements.txt`
-- `Solana_module/solana_module/anchor_module/requirements.txt`
+* Add your wallets: `Solana_module/solana_module/solana_wallets/*.json`
+* Add your programs: `Solana_module/solana_module/anchor_module/anchor_programs`
+* Add trace files: `Solana_module/solana_module/anchor_module/execution_traces/*.json`
 
-Dal menu “Solana”:
-- Upload → carichi un `.rs`
-- Compile & Deploy → compila + deploy (Devnet/Testnet/Mainnet)
-- Interactive Data Insertion → invio istruzioni con parametri
-- Execution Traces → esecuzione automatica da file JSON
+Check exact dependencies in:
+
+* `Solana_module/solana_module/requirements.txt`
+* `Solana_module/solana_module/anchor_module/requirements.txt`
+
+From the **Solana menu**:
+
+* **Upload** → upload a `.rs` file
+* **Compile & Deploy** → compile + deploy to Devnet/Testnet/Mainnet
+* **Interactive Data Insertion** → send on-chain instructions with parameters
+* **Execution Traces** → run automatic sequences from JSON
+
+---
 
 ### Tezos
-- Contratti: `Tezos_module/contracts/<NomeContratto>/<NomeContratto>.py`
-- Wallet: `Tezos_module/tezos_module/tezos_wallets/wallet.json`
-- Tracce: `Tezos_module/toolchain/execution_traces/*.csv`
 
-Dal menu “Tezos”:
-- Compile → esegue SmartPy e genera Michelson
-- Deploy → origination su Ghostnet
-- Interact → chiama entrypoint con parametri
-- Execute Trace → esecuzione CSV (wrapper di comandi esistenti)
+* Contracts: `Tezos_module/contracts/<ContractName>/<ContractName>.py`
+* Wallet: `Tezos_module/tezos_module/tezos_wallets/wallet.json`
+* Traces: `Tezos_module/toolchain/execution_traces/*.csv`
+
+From the **Tezos menu**:
+
+* **Compile** → run SmartPy compiler and generate Michelson
+* **Deploy** → originate contract on Ghostnet
+* **Interact** → call entrypoints with parameters
+* **Execute Trace** → run a full CSV-defined sequence
+
+---
 
 ### Ethereum
-- Contratti: `ethereum_module/hardhat_module/contracts/*.sol`
-- Artifacts: `ethereum_module/hardhat_module/artifacts/*.json`
-- Deployments: `ethereum_module/hardhat_module/deployments/*.json`
-- Wallet: `ethereum_module/ethereum_wallets/*.json`
 
-Dal menu “Ethereum”:
-- Manage Wallets → mostra address e balance
-- Upload new contract → carica `.sol`
-- Compile & Deploy → compila con `py-solc-x` e deploy su localhost/Sepolia/Goerli/Mainnet
-- Interactive → chiama funzioni del contratto (view/tx)
+* Contracts: `ethereum_module/hardhat_module/contracts/*.sol`
+* Artifacts: `ethereum_module/hardhat_module/artifacts/*.json`
+* Deployments: `ethereum_module/hardhat_module/deployments/*.json`
+* Wallets: `ethereum_module/ethereum_wallets/*.json`
+
+From the **Ethereum menu**:
+
+* **Manage Wallets** → view addresses and balances
+* **Upload new contract** → upload `.sol` files
+* **Compile & Deploy** → compile via `py-solc-x` and deploy to localhost/Sepolia/Goerli/Mainnet
+* **Interactive** → call contract functions (view or transaction)
+
+---
+
+Enjoy experimenting with multi-chain smart contracts in one unified environment 🚀
