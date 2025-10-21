@@ -1,0 +1,27 @@
+{
+  "network": "localhost*",
+  "platform": "Ethereum",
+  "trace_title": "SimpleTransfer_localhost_results",
+  "actions": [
+    {
+      "sequence_id": "1",
+      "function_name": "deposit",
+      "transaction_hash": "180b9b46a1ae35194c1a846ad5a64686f16e802a379ee1a5469dc1c740442e65",
+      "block_number": 110,
+      "gas_used": 23354,
+      "gas_price_gwei": 1.000000544,
+      "transaction_fee_eth": "0.000023354012704576",
+      "status": "Success"
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "withdraw",
+      "transaction_hash": "657f1b905cbcdf5a7f508f6386eb356bbc594c2ee590efacc773336c5bc5b57c",
+      "block_number": 111,
+      "gas_used": 31091,
+      "gas_price_gwei": 1.000000477,
+      "transaction_fee_eth": "0.000031091014830407",
+      "status": "Success"
+    }
+  ]
+}

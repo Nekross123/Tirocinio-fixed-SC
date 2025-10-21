@@ -353,6 +353,14 @@ def _write_json(file_name, results , network):
 
 def build_table(data):
     """Render a vertical, readable summary table in Streamlit with downloads."""
+    if data is None:
+        st.error("No data received from backend")
+        return
+    
+    if "results_file" not in data:
+        st.error(f"Invalid data format: {data}")
+        return
+        
     results = data["results_file"]
     actions = results["actions"]
     

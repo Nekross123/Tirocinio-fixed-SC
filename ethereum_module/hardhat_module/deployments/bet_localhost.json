@@ -1,0 +1,52 @@
+{
+  "contract_name": "bet",
+  "address": "0x5bf5b11053e734690269C6B9D438F8C9d48F528A",
+  "transaction_hash": "407e9ac3362056c1883ccbf14e92de5ba4212b7b01b78af6f49b8ad9e1f9bd4c",
+  "network": "localhost",
+  "deployed_at": 1761077044.4974992,
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_oracle",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_timeout",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "join",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "timeout",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "winner",
+          "type": "uint256"
+        }
+      ],
+      "name": "win",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

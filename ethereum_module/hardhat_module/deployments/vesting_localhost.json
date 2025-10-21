@@ -1,0 +1,82 @@
+{
+  "contract_name": "vesting",
+  "address": "0x07882Ae1ecB7429a84f1D53048d35c4bB2056877",
+  "transaction_hash": "45843860d507b2b9f57c6491689708956c15488ead206e2570feb6d80b74b3c6",
+  "network": "localhost",
+  "deployed_at": 1761077044.249586,
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "beneficiaryAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "startTimestamp",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "durationSeconds",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "EtherReleased",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "releasable",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "release",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "timestamp",
+          "type": "uint64"
+        }
+      ],
+      "name": "vestedAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
