@@ -222,7 +222,7 @@ def collect_generic_parameter(param_name: str, param_type: str) -> str:
     )
 
 
-def collect_execution_settings(guidance: Dict[str, Any]) -> Dict[str, Any]:
+def collect_execution_settings(guidance: Dict[str, Any] , network) -> Dict[str, Any]:
     """Collect execution settings (wallet, gas, value)."""
     st.markdown("### ⚙️ Execution Settings")
     
@@ -231,9 +231,11 @@ def collect_execution_settings(guidance: Dict[str, Any]) -> Dict[str, Any]:
     if not wallets:
         st.error("No wallets available for execution")
         return {}
-    
-    wallet = st.selectbox("Select wallet to execute transaction:", wallets)
-    
+    if network == "localhost":
+        wallet = st.selectbox("Select wallet to execute transaction:", [w for w in wallets if w.startswith("localhost")])
+    else:
+        wallet = st.selectbox("Select wallet to execute transaction:", wallets)
+
     # ETH value (if payable)
     value_eth = "0"
     if guidance['is_payable']:
@@ -306,7 +308,7 @@ def run_interactive_contract_interface() -> None:
         parameters = collect_function_parameters(guidance)
         
         # Step 4: Execution Settings
-        settings = collect_execution_settings(guidance)
+        settings = collect_execution_settings(guidance ,get_contract_info(contract_id)['network'])
         if not settings:
             return
         

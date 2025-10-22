@@ -1,0 +1,62 @@
+{
+  "trace_title": "vault",
+  "trace_actors": [
+    "actor1",
+    "actor2",
+    "actor3"
+  ],
+  "configuration": {
+    "solana": {"use" : "True"},
+    "evm": {"use" : "False"},
+    "tezos": {"use" : "False"},
+    "cardano": {"use" : "False"}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "initialize",
+      "waiting_time": 0,
+      "actors": [
+        "actor1",
+        "actor2"
+        
+      ],
+      "args": {},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "yourPdaName": { "opt" : "s",
+                          "param" :["param1", "param2"]}
+                          ,
+        "argument1": "value1",
+        "argument": "value2",
+        "provider_wallet": "actor1",
+        "send_transaction": true
+      }
+    } ,
+
+    {
+      "sequence_id": "2",
+      "function_name": "yourFunctionName2",
+      "waiting_time": 5,
+      "actors": [
+        "actor2",
+        "actor3"
+      ],
+      "args": {},
+      "tezos": {},
+      "cardano": {},
+      "evm": {},
+      "solana": {
+        "yourPdaName": { "opt" : "s",
+                          "param" :["param1", "param2"]}
+                          ,
+        "argument1": "value1",
+        "argument": "value2",
+        "provider_wallet": "actor2",
+        "send_transaction": true
+      }
+    }
+  ]
+}
