@@ -1,5 +1,3 @@
-# MIT License
-#
 # Streamlit implementation of Interactive Contract Interface
 # Provides guided step-by-step contract interaction - Functional Approach
 

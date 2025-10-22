@@ -1,5 +1,3 @@
-# MIT License
-#
 # Tezos utilities - Wrapper per tezos-contract-2.0 esistente
 # NON MODIFICA il codice originale, solo import e wrapper functions
 

@@ -1,6 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025  Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
 # Based on Prof. Andrea Pinna's approach from bcschool2023
 
 """
