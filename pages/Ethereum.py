@@ -84,7 +84,7 @@ st.title("⚡ Ethereum Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Select Action",
-    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion")
+    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion", "Execution Traces")
 )
 
 WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
@@ -654,6 +654,62 @@ elif selected_action == "Interactive data insertion":
         st.error(f"Interactive interface not available: {e}")
     except Exception as e:
         st.error(f"Error loading interactive interface: {e}")
+
+elif selected_action == "Execution Traces":
+    st.markdown("### 📊 Execution Traces")
+    st.caption("Execute predefined transaction sequences from execution trace files.")
+    
+    try:
+        from ethereum_module.hardhat_module.automatic_execution_manager import (
+            find_execution_traces,
+            run_execution_trace
+        )
+        
+        # Find available traces
+        traces = find_execution_traces()
+        
+        if not traces:
+            st.warning("No execution traces found.")
+            st.info("💡 Create execution trace files in `ethereum_module/hardhat_module/execution_traces/`")
+        else:
+            st.markdown("#### Available Execution Traces")
+            
+            # Select trace file
+            trace_file = st.selectbox(
+                "Select Execution Trace",
+                ["--"] + traces,
+                help="Choose an execution trace file to run"
+            )
+            
+            if trace_file != "--":
+                # Execute button
+                if st.button(f"🚀 Execute Trace: {trace_file}"):
+                    with st.spinner(f"Executing trace {trace_file}..."):
+                        try:
+                            result = run_execution_trace(trace_file)
+                            
+                            if result.get('success'):
+                                st.success("✅ Execution trace completed successfully!")
+                                
+                                if 'results_file' in result:
+                                    st.info(f"📁 **Results saved to:** `{result['results_file']}`")
+                                
+                                # Show results if available
+                                if 'results_data' in result:
+                                    with st.expander("📊 Execution Results", expanded=True):
+                                        st.json(result['results_data'])
+                            else:
+                                st.error(f"❌ Execution failed: {result.get('error', 'Unknown error')}")
+                                
+                        except Exception as e:
+                            st.error(f"Error executing trace: {str(e)}")
+            else:
+                st.info("Please select an execution trace to run.")
+                
+    except ImportError as e:
+        st.error(f"Execution traces module not available: {e}")
+    except Exception as e:
+        st.error(f"Error loading execution traces: {e}")
 
 
 # ==============================

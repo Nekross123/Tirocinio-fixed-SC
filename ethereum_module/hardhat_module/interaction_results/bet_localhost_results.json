@@ -11,7 +11,8 @@
       "gas_used": 47790,
       "gas_price_gwei": 1.000001055,
       "transaction_fee_eth": "0.00004779005041845",
-      "status": "Success"
+      "status": "Success",
+      "size_in_bytes": 146
     },
     {
       "sequence_id": "2",
@@ -21,7 +22,8 @@
       "gas_used": 35201,
       "gas_price_gwei": 1.000000924,
       "transaction_fee_eth": "0.000035201032525724",
-      "status": "Success"
+      "status": "Success",
+      "size_in_bytes": 146
     },
     {
       "sequence_id": "3",
@@ -31,7 +33,8 @@
       "gas_used": 47790,
       "gas_price_gwei": 1.000000153,
       "transaction_fee_eth": "0.00004779000731187",
-      "status": "Success"
+      "status": "Success",
+      "size_in_bytes": 146
     },
     {
       "sequence_id": "4",
@@ -41,7 +44,8 @@
       "gas_used": 35201,
       "gas_price_gwei": 1.000000134,
       "transaction_fee_eth": "0.000035201004716934",
-      "status": "Success"
+      "status": "Success",
+      "size_in_bytes": 146
     }
   ]
 }

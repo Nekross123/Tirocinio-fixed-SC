@@ -1,25 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import os
 import re
 import json
@@ -412,7 +390,7 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
         
         if receipt and receipt.status == 1:
             # Save deployment info
-            _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi)
+            _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi, contract_bytecode)
             
             return {
                 "success": True,
@@ -427,10 +405,17 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
         return {"success": False, "error": f"Deployment error: {str(e)}"}
 
 
-def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi):
+def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi, bytecode=None):
     """Save deployment information to a JSON file."""
     deployments_dir = os.path.join(hardhat_base_path, "deployments")
     os.makedirs(deployments_dir, exist_ok=True)
+    
+    # Calculate bytecode size if bytecode is provided
+    size_in_bytes = 0
+    if bytecode:
+        # Remove '0x' prefix if present and calculate size
+        clean_bytecode = bytecode[2:] if bytecode.startswith('0x') else bytecode
+        size_in_bytes = len(clean_bytecode) // 2  # Each byte is 2 hex characters
     
     deployment_info = {
         "contract_name": contract_name,
@@ -438,6 +423,7 @@ def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi
         "transaction_hash": tx_hash,
         "network": network,
         "deployed_at": time.time(),
+        "size_in_bytes": size_in_bytes,
         "abi": abi
     }
     

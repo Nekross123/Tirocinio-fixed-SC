@@ -8,14 +8,16 @@
       "function_name": "releasable",
       "transaction_hash": "READ_ONLY",
       "block_number": 103,
-      "return_value": "11111111111111111"
+      "return_value": "11111111111111111",
+      "size_in_bytes": 146
     },
     {
       "sequence_id": "2",
       "function_name": "vestedAmount",
       "transaction_hash": "READ_ONLY",
       "block_number": 103,
-      "return_value": "1000000000000000000"
+      "return_value": "1000000000000000000",
+      "size_in_bytes": 146
     },
     {
       "sequence_id": "3",
@@ -25,7 +27,8 @@
       "gas_used": 53411,
       "gas_price_gwei": 1.000001205,
       "transaction_fee_eth": "0.000053411064360255",
-      "status": "Success"
+      "status": "Success",
+      "size_in_bytes": 114
     }
   ]
 }

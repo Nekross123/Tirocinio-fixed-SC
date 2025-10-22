@@ -1,7 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
 # Tezos interface per Flask backend - Bridge functions
 
 from .tezos_utils import (

@@ -1,14 +1,5 @@
 # Fee Toolchain – Solana Module
 
-**Master's Thesis**  
-**Degree Program**: Computer Engineering, Cybersecurity and Artificial Intelligence  
-**University**: Università degli Studi di Cagliari  
-**Thesis Title**: A toolchain for analyzing fees and transaction sizes on public blockchains: The case of Solana  
-**Author**: Manuel Boi ,Palumbo Lorenzo and Piras Mauro
-**Supervisor**: Prof. Andrea Pinna
-
----
-
 ## Overview
 
 This repository contains the source code of the toolchain developed as part of the master's thesis.  
@@ -60,19 +51,3 @@ This folder contains images which may be useful to understand the architecture a
 You can view them in the `images/` folder. These diagrams show the modular structure of the system and how different components interact with each other.
 
 ---
-
-## License
-
-This project is released under the [MIT License](LICENSE).
-
----
-
-## Citation
-
-If you use this toolchain or base your work on it, please cite the thesis or include attribution to this repository.
-
----
-
-## Contact
-
-For any questions or collaborations, feel free to reach out via GitHub or email.

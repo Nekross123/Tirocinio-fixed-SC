@@ -1,7 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
 # Interactive Contract Interface for Ethereum - Functional Approach
 #
 
