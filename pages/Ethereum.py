@@ -656,53 +656,57 @@ elif selected_action == "Interactive data insertion":
         st.error(f"Error loading interactive interface: {e}")
 
 elif selected_action == "Execution Traces":
-    st.markdown("### 📊 Execution Traces")
-    st.caption("Execute predefined transaction sequences from execution trace files.")
+    st.markdown("###  Execution Traces")
+    st.caption("Select and execute Ethereum contract execution traces")
     
     try:
         from ethereum_module.hardhat_module.automatic_execution_manager import (
-            find_execution_traces,
-            run_execution_trace
+            get_execution_traces,
+            exec_contract_automatically
         )
         
-        # Find available traces
-        traces = find_execution_traces()
+        # Get available traces
+        traces = get_execution_traces()
         
         if not traces:
-            st.warning("No execution traces found.")
+            st.warning("⚠️ No execution traces found in the execution_traces folder")
             st.info("💡 Create execution trace files in `ethereum_module/hardhat_module/execution_traces/`")
         else:
-            st.markdown("#### Available Execution Traces")
-            
-            # Select trace file
-            trace_file = st.selectbox(
-                "Select Execution Trace",
-                ["--"] + traces,
-                help="Choose an execution trace file to run"
+            # Trace selection
+            st.markdown("####  Select Execution Trace")
+            selected_trace = st.selectbox(
+                "Available execution traces:",
+                ["--Select Trace--"] + traces,
+                help="Choose an execution trace to run"
             )
             
-            if trace_file != "--":
+            # Store in variable as requested
+            contract_deployment_id = None
+            if selected_trace != "--Select Trace--":
+                contract_deployment_id = selected_trace.replace('.json', '')
+                
+                # Display trace info
+                st.info(f" Selected trace: **{contract_deployment_id}**")
+                
                 # Execute button
-                if st.button(f"🚀 Execute Trace: {trace_file}"):
-                    with st.spinner(f"Executing trace {trace_file}..."):
+                if st.button("⚡ Execute Trace", type="primary"):
+                    with st.spinner("Executing trace..."):
                         try:
-                            result = run_execution_trace(trace_file)
+                            # Call the function from automatic_execution_manager
+                            result = exec_contract_automatically(contract_deployment_id)
                             
-                            if result.get('success'):
-                                st.success("✅ Execution trace completed successfully!")
+                            if result and result.get('success'):
+                                st.success("✅ Execution completed successfully!")
                                 
-                                if 'results_file' in result:
-                                    st.info(f"📁 **Results saved to:** `{result['results_file']}`")
-                                
-                                # Show results if available
-                                if 'results_data' in result:
-                                    with st.expander("📊 Execution Results", expanded=True):
-                                        st.json(result['results_data'])
+                                # Show execution results
+                                with st.expander("📊 Execution Results", expanded=True):
+                                    st.json(result)
                             else:
-                                st.error(f"❌ Execution failed: {result.get('error', 'Unknown error')}")
+                                error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                                st.error(f"❌ Execution failed: {error_msg}")
                                 
                         except Exception as e:
-                            st.error(f"Error executing trace: {str(e)}")
+                            st.error(f"❌ Error executing trace: {str(e)}")
             else:
                 st.info("Please select an execution trace to run.")
                 

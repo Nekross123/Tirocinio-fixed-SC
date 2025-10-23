@@ -25,13 +25,13 @@ async def run_execution_trace(file_name):
     results to display and allow download.
     """
     
-    # Create placeholder for status message
+    
     status_placeholder = st.empty()
     
-    # Show initial message
+    
     status_placeholder.info(f"⏳ Executing automatic trace: **{file_name}**...")
     
-    # Check initialized programs
+    
     initialized_programs = fetch_initialized_programs()
     if len(initialized_programs) == 0:
         status_placeholder.error("❌ No program has been initialized yet. Please compile an Anchor program first.")

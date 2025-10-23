@@ -6,6 +6,8 @@ from web3 import Web3
 from eth_account import Account
 import secrets
 
+
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
@@ -19,11 +21,101 @@ except Exception as e:
 
 # Base path now points to this package at repo root
 ethereum_base_path = os.path.join("ethereum_module")
-
+hardhat_base_path = f"{ethereum_base_path}/hardhat_module"
 # Global default network - can be changed by set_default_network()
 DEFAULT_NETWORK = "localhost"
 
 
+def read_json(file_path):
+    """Safely read and parse a JSON file; return dict or None on error."""
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data
+        except FileNotFoundError:
+            print(f"File {file_path} non trovato")
+            return None
+        except json.JSONDecodeError as e:
+            print(f"Errore nel parsing JSON: {e}")
+            return None
+        except Exception as e:
+            print(f"Errore generico: {e}")
+            return None 
+        with open(file_path, mode='r') as file:
+            data = load_json('auction')
+            return list(json_file)
+    else:
+        return None
+
+def bind_actors(trace_name):
+
+
+    #this function binds each actor with a wallet
+    with open(f"{hardhat_base_path}/execution_traces/{trace_name}.json", "r") as f:
+        data = json.load(f)
+
+    association = dict()
+    trace_actors  = data["trace_actors"]
+    wallets_path = 'ethereum_module/ethereum_wallets'
+    
+    # Filter only .json wallet files
+    all_files = os.listdir(wallets_path)
+    wallets = [f for f in all_files if f.endswith('.json') and os.path.isfile(os.path.join(wallets_path, f))]
+    
+    if len(wallets) < len(trace_actors):
+        print(f"Not enough wallet files! Found {len(wallets)} wallets but need {len(trace_actors)} for actors: {trace_actors}")
+        print(f"Available wallets: {wallets}")
+        return {}
+
+    try:
+        for j in range(len(trace_actors)):
+            association[trace_actors[j]] = wallets[j]
+            print(f"  Actor '{trace_actors[j]}' -> Wallet '{wallets[j]}'")
+    except IndexError:
+        print("The wallets are less than the actors, impossible to associate.\nCreate more wallets or reduce the number of actors")
+        return {}
+
+    print("All the actors have been associated")
+    return association
+
+def build_complete_dict(trace_name):
+    actors_dict = bind_actors(trace_name)
+
+    with open(f"{hardhat_base_path}/execution_traces/{trace_name}.json", "r") as f:
+        data = json.load(f)
+
+    args = data["trace_execution"][0]["args"]
+    
+    eth_args = data["trace_execution"][0]["ethereum"]
+
+    complete_dict =  args | eth_args
+
+    for key, value in complete_dict.items():
+        if value in actors_dict:
+            complete_dict[key] = actors_dict[value]
+
+
+
+    return complete_dict
+
+def set_guidance_parameters(guidance , complete_dict):
+
+    param_values = []
+    for param in guidance['parameters']:
+        param_name = param['name']
+        if param['type'] == 'address':
+            continue  # Skip address inputs
+        if param_name in complete_dict:
+            
+            param_values.append(complete_dict[param_name])
+        else:
+            st.error(f"❌ Missing parameter value for: {param_name}")
+            return None
+
+
+            
+    return param_values
 def set_default_network(network):
     """Set the default network for all operations."""
     global DEFAULT_NETWORK

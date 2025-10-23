@@ -253,11 +253,7 @@ def input_token_account_manually():
 
 
 def bind_actors(trace_name):
-    """Bind each actor from a JSON trace to a wallet file.
 
-    I look into solana_wallets and try to assign the first N wallet files
-    to the N actors in the trace. If there aren’t enough files, I explain why.
-    """
 
     #this function binds each actor with a wallet
     with open(f"{anchor_base_path}/execution_traces/{trace_name}", "r") as f:

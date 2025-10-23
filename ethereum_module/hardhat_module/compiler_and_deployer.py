@@ -427,7 +427,7 @@ def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi
         "abi": abi
     }
     
-    deployment_file = os.path.join(deployments_dir, f"{contract_name}_{network}.json")
+    deployment_file = os.path.join(deployments_dir, f"{contract_name}.json")
     with open(deployment_file, 'w', encoding='utf-8') as f:
         json.dump(deployment_info, f, indent=2)
 

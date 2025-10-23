@@ -1,9 +1,10 @@
 {
   "contract_name": "auction",
-  "address": "0x4542525b12A7E0C9E34b5677C3d4009F89b07D22",
-  "transaction_hash": "0x0cc6bfb3c1c8669f2c483bc1f6adef9b3a771103524e3d3ee3674cba309a1651",
-  "network": "sepolia",
-  "deployed_at": 1760798989.521423,
+  "address": "0x47AFf4EbA9820a24E5A383B1bE3f226bEFAe148A",
+  "transaction_hash": "0x78a45a508382a68c823f3f59c5214dbe7ea006f64ea3f41aece42bf0f6b9ed57",
+  "network": "localhost",
+  "deployed_at": 1761212966.6054363,
+  "size_in_bytes": 6290,
   "abi": [
     {
       "inputs": [
