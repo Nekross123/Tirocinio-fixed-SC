@@ -1,5 +1,5 @@
 {
-  "trace_title": "auction_localhost",
+  "trace_title": "auction",
   "trace_actors": [
     "seller"
   ],
@@ -13,8 +13,42 @@
     {
       "sequence_id": "1",
       "function_name": "start",
-      "args": {"_duration": 15},
+      "args": {"_duration": "15"},
       "ethereum": {
+        "gas_limit": "300000",
+        "sender_wallet": "seller",
+        "send_transaction": true
+      }
+    },
+     {
+      "sequence_id": "2",
+      "function_name": "bid",
+      "args": {},
+      "ethereum": {
+        "eth_value": "2",
+        "gas_limit": "300000",
+        "sender_wallet": "seller",
+        "send_transaction": true
+      }
+    },
+
+    {
+      "sequence_id": "3",
+      "function_name": "withdraw",
+      "args": {},
+      "ethereum": {
+        
+        "gas_limit": "300000",
+        "sender_wallet": "seller",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "4",
+      "function_name": "end",
+      "args": {},
+      "ethereum": {
+        
         "gas_limit": "300000",
         "sender_wallet": "seller",
         "send_transaction": true

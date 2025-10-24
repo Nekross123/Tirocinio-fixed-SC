@@ -48,9 +48,7 @@ def read_json(file_path):
     else:
         return None
 
-def bind_actors(trace_name):
-
-
+def bind_actors(trace_name ):
     #this function binds each actor with a wallet
     with open(f"{hardhat_base_path}/execution_traces/{trace_name}.json", "r") as f:
         data = json.load(f)
@@ -70,7 +68,8 @@ def bind_actors(trace_name):
 
     try:
         for j in range(len(trace_actors)):
-            association[trace_actors[j]] = wallets[j]
+            print(f"Associating actor '{trace_actors[j]}' with wallet '{wallets[j+3]}'")
+            association[trace_actors[j]] = wallets[j+3]
             print(f"  Actor '{trace_actors[j]}' -> Wallet '{wallets[j]}'")
     except IndexError:
         print("The wallets are less than the actors, impossible to associate.\nCreate more wallets or reduce the number of actors")
@@ -79,7 +78,7 @@ def bind_actors(trace_name):
     print("All the actors have been associated")
     return association
 
-def build_complete_dict(trace_name):
+def build_complete_dict(trace_name ):
     actors_dict = bind_actors(trace_name)
 
     with open(f"{hardhat_base_path}/execution_traces/{trace_name}.json", "r") as f:
@@ -101,20 +100,20 @@ def build_complete_dict(trace_name):
 
 def set_guidance_parameters(guidance , complete_dict):
 
-    param_values = []
+    param_values = {}
     for param in guidance['parameters']:
         param_name = param['name']
         if param['type'] == 'address':
             continue  # Skip address inputs
         if param_name in complete_dict:
             
-            param_values.append(complete_dict[param_name])
+            param_values[param['name']] = complete_dict[param_name]
         else:
             st.error(f"❌ Missing parameter value for: {param_name}")
             return None
 
 
-            
+    print(f"Parameter values set: {param_values}")
     return param_values
 def set_default_network(network):
     """Set the default network for all operations."""

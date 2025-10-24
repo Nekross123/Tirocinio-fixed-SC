@@ -190,7 +190,11 @@ def build_function_call_data(contract_deployment_id, function_name, param_values
                 
         else:
             # Handle other parameter types
+            #add an int , bool , float , string handling
+
             param_value = param_values.get(param_name, '').strip()
+
+            
             
             if not param_value or param_value == '--':
                 raise ValueError(f"Parameter {param_name} not provided")

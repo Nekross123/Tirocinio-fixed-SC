@@ -383,9 +383,6 @@ def generate_pda_automatically(actors ,program_name ,sol_args , args):
 
             if opt == "s":
                         
-                        
-
-
                         module_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchorpy_files/program_id.py"
                         spec = importlib.util.spec_from_file_location("program_id", module_path)
                         module = importlib.util.module_from_spec(spec)

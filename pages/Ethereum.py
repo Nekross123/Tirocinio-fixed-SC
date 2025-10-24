@@ -608,6 +608,7 @@ elif selected_action == "Interactive data insertion":
                                     key="gas_limit"
                                 )
                             
+                            
                             # Submit button
                             submit_button = st.form_submit_button(
                                 f"Execute {function_name}()",
@@ -615,6 +616,8 @@ elif selected_action == "Interactive data insertion":
                             )
                             
                             if submit_button:
+
+
                                 # Validate inputs
                                 if caller_wallet == "--":
                                     st.error("Please select a sender wallet")
