@@ -26,7 +26,8 @@ try:
     from ethereum_module.streamlit_constructor_interface import (
         collect_constructor_args_streamlit,
         display_constructor_preview,
-        validate_constructor_args
+        validate_constructor_args,
+        is_constructor_payable
     )
 except ImportError as e:
     st.error(f"Ethereum modules not found. Please ensure the Toolchain is properly set up: {e}")
@@ -214,6 +215,17 @@ elif selected_action == "Compile & Deploy":
                         # Collect constructor arguments if needed
                         constructor_args = collect_constructor_args_streamlit(contract_name, compiled_data['abi'])
                         constructor_valid = constructor_args is not None
+                        if is_constructor_payable(compiled_data['abi']):
+                            value_in_ether = st.number_input(
+                                f"This contract has a payable constructor, choose an amount of ether to send:",
+                                min_value=0,
+                                step=1,
+                                key=f"eth_value",
+                                format="%d"
+                            )
+                            
+                        else:
+                            value_in_ether = 0
                         
                         if constructor_args:
                             # Store in session state for deployment
@@ -258,6 +270,7 @@ elif selected_action == "Compile & Deploy":
                 # Add single_contract parameter if in single contract mode
                 if compile_mode == "Single contract":
                     compile_payload["single_contract"] = selected_contract_file
+                    
                     
                 compile_res = requests.post(
                     "http://127.0.0.1:5000/eth_compile_deploy",
@@ -306,7 +319,8 @@ elif selected_action == "Compile & Deploy":
                         constructor_key = f'constructor_args_{contract_name}'
                         if constructor_key in st.session_state:
                             deploy_payload["constructor_args"] = st.session_state[constructor_key]
-                        
+                            
+                        deploy_payload["value_in_ether"] = value_in_ether
                     deploy_res = requests.post(
                         "http://127.0.0.1:5000/eth_compile_deploy",
                         json=deploy_payload

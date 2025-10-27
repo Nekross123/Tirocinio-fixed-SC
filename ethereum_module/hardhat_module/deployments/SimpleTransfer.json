@@ -1,0 +1,41 @@
+{
+  "contract_name": "SimpleTransfer",
+  "address": "0x336e71DaB0302774b1e4c53202bF3f2D1aD1a8e6",
+  "transaction_hash": "0xc738edfaad118053ac6050a5aaa27c685d654bedfb63ddfabcf124a48fc814cc",
+  "network": "localhost",
+  "deployed_at": 1761515882.0543618,
+  "size_in_bytes": 1702,
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address payable",
+          "name": "_recipient",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

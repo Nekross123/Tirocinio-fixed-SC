@@ -348,6 +348,9 @@ def eth_compile_deploy():
     network = request.json.get("network", "sepolia")
     single_contract = request.json.get("single_contract", None)
     constructor_args = request.json.get("constructor_args", None)
+    value_in_ether = request.json.get("value_in_ether", 0)
+    
+
     
     try:
         result = compile_and_deploy_contracts(
@@ -355,11 +358,15 @@ def eth_compile_deploy():
             network=network,
             deploy=deploy_flag,
             single_contract=single_contract,
-            constructor_args=constructor_args
+            constructor_args=constructor_args, 
+            value_in_ether=value_in_ether
         )
+        
+        print(f"📥 Risultato: {result}")
         return jsonify(result)
     except Exception as e:
         import traceback
+        print("❌ ERRORE nel backend:")
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 

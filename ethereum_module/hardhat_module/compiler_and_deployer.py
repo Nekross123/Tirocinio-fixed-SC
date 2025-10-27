@@ -4,6 +4,7 @@ import json
 import subprocess
 import platform
 import time
+import streamlit as st
 from web3 import Web3
 from eth_account import Account
 from solcx import compile_source, install_solc, set_solc_version
@@ -148,7 +149,8 @@ def _collect_constructor_args_interactive(contract_name: str, abi_data) -> list:
 # =====================================================
 # MAIN COMPILE AND DEPLOY FUNCTION
 # =====================================================
-def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None, constructor_args=None):
+def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None, constructor_args=None , value_in_ether=0):
+
     """
     Compile and optionally deploy Solidity contracts.
     
@@ -210,7 +212,8 @@ def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=F
                             compiled_data, 
                             wallet_name, 
                             network,
-                            contract_constructor_args
+                            contract_constructor_args,
+                            value_in_ether
                         )
                         
                         if deploy_result["success"]:
@@ -324,8 +327,11 @@ def _save_contract_artifacts(contract_name, compiled_data, source_code):
         json.dump(bytecode_data, f, indent=2)
 
 
-def _deploy_contract(contract_name, compiled_data, wallet_name, network, constructor_args=None):
+def _deploy_contract(contract_name, compiled_data, wallet_name, network, constructor_args=None, value_in_ether=0):
     """Deploy a compiled contract to the specified network."""
+
+        # PRINT IMMEDIATO PER VEDERE SE LA FUNZIONE VIENE CHIAMATA
+
     try:
         # Load wallet
         wallet_path = os.path.join("ethereum_module", "ethereum_wallets", wallet_name)
@@ -362,35 +368,53 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
             
             print(f"✅ Using provided constructor arguments: {constructor_args}")
 
+        # Prepare transaction parameters
+        tx_params = {
+            'from': account.address,
+            'nonce': nonce,
+            'gas': 3000000,  # Default gas limit
+            'gasPrice': w3.eth.gas_price,
+        }
+        
+        # Add value if specified
+        if value_in_ether > 0:
+            tx_params['value'] = w3.to_wei(value_in_ether, 'ether')
+            print(f"💰 Sending {value_in_ether} ETH with deployment")
+            print(f"💰 Value in Wei: {tx_params['value']}")
+        else:
+            print(f"⚠️ WARNING: No ETH being sent (value_in_ether = {value_in_ether})")
+        
+        # Debug prints
+        print(f"📋 Constructor args: {constructor_args}")
+        print(f"📋 Transaction params: {tx_params}")
+        
         # Build deployment transaction
         if constructor_args:
-            transaction = contract.constructor(*constructor_args).build_transaction({
-                'from': account.address,
-                'nonce': nonce,
-                'gas': 3000000,  # Default gas limit
-                'gasPrice': w3.eth.gas_price,
-            })
+            transaction = contract.constructor(*constructor_args).build_transaction(tx_params)
         else:
-            transaction = contract.constructor().build_transaction({
-                'from': account.address,
-                'nonce': nonce,
-                'gas': 3000000,  # Default gas limit
-                'gasPrice': w3.eth.gas_price,
-            })
+            transaction = contract.constructor().build_transaction(tx_params)
+
+        print(f"📋 Built transaction: {transaction}")
 
         # Sign transaction
         signed_txn = w3.eth.account.sign_transaction(transaction, wallet_data["private_key"])
 
         # Send transaction - handle different web3.py versions
         raw_transaction = getattr(signed_txn, 'rawTransaction', getattr(signed_txn, 'raw_transaction', signed_txn))
+        
+        print(f"📤 Sending transaction...")
         tx_hash = w3.eth.send_raw_transaction(raw_transaction)
+        print(f"✅ Transaction sent: {tx_hash.hex()}")
         
         # Wait for transaction receipt
+        print(f"⏳ Waiting for transaction receipt...")
         receipt = wait_for_transaction_receipt(tx_hash.hex(), network)
         
         if receipt and receipt.status == 1:
             # Save deployment info
             _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi, contract_bytecode)
+            
+            print(f"✅ Contract deployed at: {receipt.contractAddress}")
             
             return {
                 "success": True,
@@ -402,6 +426,9 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
             return {"success": False, "error": "Transaction failed or contract not deployed"}
 
     except Exception as e:
+        print(f"❌ Exception during deployment: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": f"Deployment error: {str(e)}"}
 
 

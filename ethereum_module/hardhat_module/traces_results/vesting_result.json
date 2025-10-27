@@ -1,0 +1,15 @@
+{
+  "network": "localhost",
+  "platform": "Ethereum",
+  "trace_title": "vesting_results",
+  "results": [
+    {
+      "step": 1,
+      "function_name": "release",
+      "success": true,
+      "transaction_hash": "0xd348090b87e41e40e3bfb6bdd0def012674dbf76fa2047b3b41ca3af484dc5a1",
+      "gas_used": 27618,
+      "size_in_bytes": 108
+    }
+  ]
+}

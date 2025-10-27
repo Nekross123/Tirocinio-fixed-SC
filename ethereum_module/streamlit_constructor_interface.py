@@ -1,9 +1,25 @@
 # Streamlit Constructor Parameter Interface for Ethereum Smart Contracts
 
 import streamlit as st
+import os
 from typing import List, Dict, Any, Optional
 from ethereum_module.hardhat_module.compiler_and_deployer import _get_constructor_parameters_from_abi
+from ethereum_module.ethereum_utils import get_wallet_address ,load_wallet_from_file
+from ethereum_module.interactive_interface import get_available_wallets
 
+
+wallets_path = os.path.join("ethereum_module", "ethereum_wallets")
+
+
+def is_constructor_payable(abi_data) -> bool:
+    """Check if the constructor is payable based on ABI."""
+    for item in abi_data:
+        if item.get('type') == 'constructor':
+            return item.get('stateMutability') == 'payable'
+    return False
+
+
+is_constructor_payable
 
 def collect_constructor_args_streamlit(contract_name: str, abi_data: List[Dict]) -> Optional[List[Any]]:
     """
@@ -67,12 +83,15 @@ def collect_constructor_args_streamlit(contract_name: str, abi_data: List[Dict])
             args.append(value)
             
         elif param_type == 'address':
-            value = st.text_input(
-                f"Enter {param_name}:",
-                key=f"constructor_{contract_name}_{param_name}",
-                placeholder="0x..."
-            )
+
+            wallet_files = get_available_wallets()
+            selected_wallet_file = st.selectbox("Select wallet", ["--"] + wallet_files)
+            wallet_path = os.path.join(wallets_path, selected_wallet_file)
+
             
+            value = load_wallet_from_file(wallet_path).get("address")
+            
+
             if value.strip():
                 if value.startswith('0x') and len(value) == 42:
                     try:
