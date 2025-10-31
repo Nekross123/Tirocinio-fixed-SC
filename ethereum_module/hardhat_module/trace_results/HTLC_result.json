@@ -1,0 +1,15 @@
+{
+  "network": "localhost",
+  "success": true,
+  "platform": "Ethereum",
+  "trace_title": "HTLC_results",
+  "results": [
+    {
+      "step": 1,
+      "function_name": "reveal",
+      "transaction_hash": "0x546de3192a492fc3b4d48ff0114a1cf255acb788da0624c2ad09263aabe37d91",
+      "gas_used": 33218,
+      "size_in_bytes": 205
+    }
+  ]
+}

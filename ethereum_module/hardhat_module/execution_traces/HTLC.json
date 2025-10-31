@@ -1,18 +1,29 @@
 {
   "trace_title": "HTLC",
   "trace_actors": [
-    "owner"
+    "owner" ,
+     "reciver"
   ],
   "configuration": {
     "ethereum": {
       "network": "localhost",
-      "use": "True"
+      "use": "True",
+      "deploy_config" : { 
+                        "settings" : {
+                          "sender_wallet" : "owner" ,
+                          "value_in_ether" : 4 
+
+                        },
+                        "v" : "reciver" ,
+                        "h" : "0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658",
+                        "delay" : "0"
+        }
     }
   },
   "trace_execution": [
     {
-      "sequence_id": "2",
-      "function_name": "timeout",
+      "sequence_id": "1",
+      "function_name": "reveal",
       "wating_time": "0",
       "args": {"s" : "test"},
       "ethereum": {

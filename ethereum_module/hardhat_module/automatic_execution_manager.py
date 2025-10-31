@@ -11,13 +11,18 @@ from ethereum_module.hardhat_module.contract_utils import (
     get_default_network
 )
 from ethereum_module.hardhat_module.meta_transaction import metaTransaction
+from ethereum_module.hardhat_module.compiler_and_deployer import automatic_compile_and_deploy_contracts
 from ethereum_module.ethereum_utils import ethereum_base_path, hardhat_base_path ,read_json , \
 bind_actors , build_complete_dict , set_guidance_parameters
 from ethereum_module.interactive_interface import get_function_guidance
+
+from ethereum_module.streamlit_constructor_interface import automatic_constructor_collector
 from eth_account import Account
 import traceback
 
 
+
+contracts_path = os.path.join(hardhat_base_path, "contracts")
 traces_path = os.path.join(hardhat_base_path, "execution_traces")
 def get_execution_traces():
     """Get list of available execution traces."""
@@ -51,13 +56,37 @@ def exec_contract_automatically(contract_deployment_id):
     
     # Get network configuration
     network = json_file["configuration"]["ethereum"]["network"]
+    contract_name = json_file.get("trace_title", "") + ".sol"
+    actors_dict = bind_actors(contract_deployment_id)
     
     # Get all trace execution steps
-    trace_executions = json_file["trace_execution"]
+    trace_executions = json_file.get("trace_execution", [])
+
+    deploy_config = json_file.get("configuration", {}).get("ethereum", {}).get("deploy_config", {})
     
     
     # Store results for all function executions
     all_results = []
+    #section for automatic deployment
+    try:
+        if deploy_config:
+       
+
+            sender_wallet_name = deploy_config.get("settings", {}).get("sender_wallet", None)
+            sender_wallet = actors_dict.get(sender_wallet_name, None)
+
+            
+            
+            value_in_ether = deploy_config.get("settings", {}).get("value_in_ether", 0)
+            constr_dict = actors_dict | deploy_config
+        
+            automatic_compile_and_deploy_contracts(sender_wallet, network, True, contract_name, constr_dict , value_in_ether)
+
+        else:
+            st.info("ℹ️ No deployment configuration found, skipping deployment step.")
+
+    except Exception as e:
+        st.info(f"❌ Error automatically deploing the contract: {str(e)}")
 
     try:
         # Get deployment info (common for all functions)
@@ -83,7 +112,7 @@ def exec_contract_automatically(contract_deployment_id):
                 "results": []
             }
         
-        st.info(f"📋 Actor-Wallet binding: {actors_dict}")
+        
         
         # Execute each function in the trace
         for i, execution_step in enumerate(trace_executions):
@@ -129,7 +158,6 @@ def exec_contract_automatically(contract_deployment_id):
                     })
                     continue
                 
-                st.info(f"📝 Using wallet: '{actual_wallet_file}' for actor: '{sender_wallet_actor}'")
                 
                 # Load wallet for this step
                 wallet_path = os.path.join("ethereum_module", "ethereum_wallets", actual_wallet_file)
@@ -192,8 +220,7 @@ def exec_contract_automatically(contract_deployment_id):
                         
                         step_result = {
                             "step": i+1,
-                            "function_name": function_name,
-                            "success": True,
+                            "function_name": function_name,                          
                             "transaction_hash": receipt['transactionHash'].hex(),
                             "gas_used": receipt.get('gasUsed', 'N/A'),
                             "size_in_bytes": receipt.get('size_in_bytes', 0)
@@ -238,6 +265,7 @@ def exec_contract_automatically(contract_deployment_id):
         # Prepare final results
         final_results = {
             "network": network,
+            "success": True,
             "platform": "Ethereum",
             "trace_title": f"{contract_deployment_id}_results",
             "results": all_results
@@ -245,7 +273,12 @@ def exec_contract_automatically(contract_deployment_id):
         
         # Save results to JSON file
         result_filename = f"{contract_deployment_id}_result.json"
-        result_filepath = os.path.join(traces_path, result_filename)
+        trace_results_dir = os.path.join(hardhat_base_path, "trace_results")
+        os.makedirs(trace_results_dir, exist_ok=True) 
+        result_filepath = os.path.join(trace_results_dir, result_filename)
+       
+
+        
         
         try:
             with open(result_filepath, 'w', encoding='utf-8') as f:

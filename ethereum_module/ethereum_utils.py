@@ -273,7 +273,7 @@ def load_wallet_from_file(wallet_file_path):
         return None
 
 
-def get_wallet_balance(wallet_file, network=None):
+def get_wallet_balance(wallet_file, network):
     """Get the ETH balance of a wallet."""
     if network is None:
         network = DEFAULT_NETWORK

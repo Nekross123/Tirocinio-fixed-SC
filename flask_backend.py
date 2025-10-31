@@ -4,7 +4,7 @@ load_dotenv()
 import os
 import sys
 import asyncio
-
+import streamlit as st
 sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Tezos_module"))
 
@@ -311,30 +311,47 @@ ETH_WALLETS_PATH = os.path.join("ethereum_module", "ethereum_wallets")
 
 @app.route("/eth_wallet_balance", methods=["POST"])
 def eth_wallet_balance():
-    """Get Ethereum wallet balance and address."""
+    print("DEBUG: /eth_wallet_balance called")
+    
     if not ETHEREUM_ENABLED:
         return jsonify({"error": "Ethereum modules not available"}), 500
         
-    wallet_file = request.json.get("wallet_file")
+    wallet_file = request.json.get("wallet_file")  # es. "localhost_weth3.json"
+    network = request.json.get("network")           # es. "localhost"
+    
+    print(f"DEBUG: Requested wallet: {wallet_file}, network: {network}")
+    
     if not wallet_file:
         return jsonify({"error": "No wallet selected"}), 400
 
     try:
+        # ✅ CORREZIONE: costruisci il path completo QUI
         wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
-        print(f"DEBUG: Wallet path: {wallet_path}")
+        print(f"DEBUG: Full wallet path: {wallet_path}")
         print(f"DEBUG: File exists: {os.path.exists(wallet_path)}")
         
-        balance = get_eth_wallet_balance(wallet_path, "sepolia")
-        print(f"DEBUG: Balance: {balance}")
+        # ✅ Passa il path completo
+        balance = get_eth_wallet_balance(wallet_path, network)
+        print(f"DEBUG: Balance retrieved: {balance}")
         
         address = get_wallet_address(wallet_path)
-        print(f"DEBUG: Address: {address}")
+        print(f"DEBUG: Address retrieved: {address}")
         
         if balance is None or address is None:
-            return jsonify({"error": f"Error reading wallet - Balance: {balance}, Address: {address}"}), 500
+            return jsonify({
+                "error": f"Error reading wallet - Balance: {balance}, Address: {address}"
+            }), 500
             
-        return jsonify({"balance": balance, "address": address})
+        return jsonify({
+            "balance": balance, 
+            "address": address,
+            "network": network
+        })
+        
     except Exception as e:
+        print(f"DEBUG: Exception occurred: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/eth_compile_deploy", methods=["POST"])

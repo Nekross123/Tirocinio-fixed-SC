@@ -1,9 +1,9 @@
 {
   "contract_name": "SimpleTransfer",
-  "address": "0x336e71DaB0302774b1e4c53202bF3f2D1aD1a8e6",
-  "transaction_hash": "0xc738edfaad118053ac6050a5aaa27c685d654bedfb63ddfabcf124a48fc814cc",
+  "address": "0x17e91224c30c5b0B13ba2ef1E84FE880Cb902352",
+  "transaction_hash": "0x555857b39883dd1e80ac239bac61d88b51fcf3fd663ef72af5b1603888563a67",
   "network": "localhost",
-  "deployed_at": 1761515882.0543618,
+  "deployed_at": 1761753642.7644784,
   "size_in_bytes": 1702,
   "abi": [
     {

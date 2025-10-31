@@ -103,17 +103,24 @@ if selected_action == "Manage Wallets":
     else:
         wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
         selected_wallet_file = st.selectbox("Select wallet", ["--"] + wallet_files)
+    
+        selected_network = st.selectbox(
+                "Select a network", 
+                ["--", "localhost", "sepolia", "goerli", "mainnet"]
+            )
         
         if selected_wallet_file != "--" and st.button("Show balance and address"):
             try:
                 res = requests.post(
                     "http://127.0.0.1:5000/eth_wallet_balance",
-                    json={"wallet_file": selected_wallet_file}
+                    json={"wallet_file": selected_wallet_file , "network": selected_network}
                 )
                 if res.status_code == 200:
+
                     data = res.json()
                     st.success(f"ETH Balance: {data['balance']} ETH")
                     st.info(f"Address: {data['address']}")
+                    
                 else:
                     st.error(res.json().get("error", "Unknown error"))
             except requests.exceptions.RequestException as e:
@@ -125,7 +132,6 @@ elif selected_action == "Upload new contract":
     uploaded_file = st.file_uploader(
         "Choose a Solidity file (.sol)", 
         type="sol",
-        help="Upload a .sol file containing your smart contract code"
     )
     
     if uploaded_file is not None:
@@ -168,7 +174,6 @@ elif selected_action == "Compile & Deploy":
         compile_mode = st.radio(
             "Compilation mode:",
             ("All contracts", "Single contract"),
-            help="Choose whether to compile all contracts or just a specific one"
         )
 
         selected_contract_file = None
@@ -463,7 +468,6 @@ elif selected_action == "Interactive data insertion":
                 "Select Network",
                 available_networks,
                 index=0,  # Default to sepolia
-                help="Choose the blockchain network to interact with"
             )
             
             st.markdown("---")
@@ -472,7 +476,6 @@ elif selected_action == "Interactive data insertion":
             contract_id = st.selectbox(
                 "Select Contract",
                 ["--"] + contracts,
-                help="Choose a deployed contract to interact with"
             )
             
             if contract_id != "--":
@@ -508,7 +511,7 @@ elif selected_action == "Interactive data insertion":
                     function_name = st.selectbox(
                         "Select Function",
                         ["--"] + function_names,
-                        help="Choose a function to interact with"
+                        
                     )
                     
                     if function_name != "--":
@@ -517,7 +520,7 @@ elif selected_action == "Interactive data insertion":
                         guidance = get_function_guidance(contract_id, function_name)
                         
                         st.markdown("---")
-                        st.markdown(f"### Function: `{function_name}()`")
+                        st.markdown(f"### Function: `{function_name}`")
                         
                         # Parameters form
                         with st.form(key=f"interact_{function_name}_form"):
@@ -597,7 +600,7 @@ elif selected_action == "Interactive data insertion":
                                     "ETH Amount",
                                     value="0",
                                     placeholder="0.1",
-                                    help="Amount of ETH to send with the transaction",
+                                    
                                     key="value_eth"
                                 )
                             
@@ -610,7 +613,6 @@ elif selected_action == "Interactive data insertion":
                                 caller_wallet = st.selectbox(
                                     "Sender Wallet",
                                     ["--"] + wallet_files,
-                                    help="Wallet that will send the transaction",
                                     key="caller_wallet"
                                 )
                             
@@ -618,15 +620,13 @@ elif selected_action == "Interactive data insertion":
                                 gas_limit = st.text_input(
                                     "Gas Limit",
                                     value="300000",
-                                    help="Maximum gas for the transaction",
                                     key="gas_limit"
                                 )
                             
                             
                             # Submit button
                             submit_button = st.form_submit_button(
-                                f"Execute {function_name}()",
-                                help=f"Send transaction to execute {function_name}"
+                                f"Execute {function_name}",
                             )
                             
                             if submit_button:
@@ -694,7 +694,6 @@ elif selected_action == "Execution Traces":
             selected_trace = st.selectbox(
                 "Available execution traces:",
                 ["--Select Trace--"] + traces,
-                help="Choose an execution trace to run"
             )
             
             # Store in variable as requested
@@ -711,7 +710,6 @@ elif selected_action == "Execution Traces":
                         try:
                             # Call the function from automatic_execution_manager
                             result = exec_contract_automatically(contract_deployment_id)
-                            
                             if result and result.get('success'):
                                 st.success("✅ Execution completed successfully!")
                                 
@@ -720,7 +718,7 @@ elif selected_action == "Execution Traces":
                                     st.json(result)
                             else:
                                 error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
-                                st.error(f"❌ Execution failed: {error_msg}")
+                                st.error(f"❌ Execution failed : {error_msg}")
                                 
                         except Exception as e:
                             st.error(f"❌ Error executing trace: {str(e)}")

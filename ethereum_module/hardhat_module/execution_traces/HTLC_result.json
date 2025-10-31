@@ -2,14 +2,6 @@
   "network": "localhost",
   "platform": "Ethereum",
   "trace_title": "HTLC_results",
-  "results": [
-    {
-      "step": 1,
-      "function_name": "timeout",
-      "success": true,
-      "transaction_hash": "0xe59af2ec36d5f658375c8289b23431edb2072ecbf9c1e23e71511eab1c2b23b2",
-      "gas_used": 30624,
-      "size_in_bytes": 108
-    }
-  ]
+  "error": "Global execution failed: Could not connect to network: localhost",
+  "results": []
 }
