@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Tezos_module"))
 # Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
 from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
-from solana_module.solana_utils import load_keypair_from_file, create_client
+from solana_module.solana_utils import load_keypair_from_file, create_client , get_wallet_balance, get_wallet_pubkey
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
 from solana_module.anchor_module.interactive_data_insertion_dapp import (
     fetch_programs,
@@ -58,38 +58,26 @@ except ImportError as e:
 
 app = Flask(__name__)
 
-WALLETS_PATH = os.path.join("Solana_module", "solana_module", "solana_wallets")
+# ==============================
+# SOLANA ROUTES
+# ==============================
 
-
-async def get_wallet_balance(wallet_file):
-    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
-    if keypair is None:
-        return None
-    client = create_client("Devnet")
-    resp = await client.get_balance(keypair.pubkey())
-    await client.close()
-    return resp.value / 1_000_000_000  # lamport -> SOL
-
-def get_wallet_pubkey(wallet_file):
-    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
-    if keypair is None:
-        return None
-    return str(keypair.pubkey())
 
 # ==============================
-# ROUTE Wallet Balance
+# ROUTE Wallet Balance Solana
 # ==============================
 @app.route("/wallet_balance", methods=["POST"])
 def wallet_balance():
     wallet_file = request.json.get("wallet_file")
+    network = request.json.get("network")
     if not wallet_file:
         return jsonify({"error": "No wallet selected"}), 400
 
-    balance = _run_async(get_wallet_balance(wallet_file))
+    balance = _run_async(get_wallet_balance(wallet_file , network))
     pubkey = get_wallet_pubkey(wallet_file)
     if balance is None:
         return jsonify({"error": "Error reading wallet"}), 500
-    return jsonify({"balance": balance, "pubkey": pubkey})
+    return jsonify({"balance": balance, "address": pubkey})
 
 # ==============================
 # ROUTE Compile & Deploy
@@ -279,7 +267,7 @@ def get_program_ctx():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==============================
-# ROUTE Placeholder Chiudi Programma
+# ROUTE Close Program
 # ==============================
 @app.route("/close_program", methods=["POST"])
 def close_program():
@@ -309,33 +297,28 @@ def close_program():
 
 ETH_WALLETS_PATH = os.path.join("ethereum_module", "ethereum_wallets")
 
+# ==============================
+# ROUTE Wallet Balance Ethereum
+# ==============================
 @app.route("/eth_wallet_balance", methods=["POST"])
 def eth_wallet_balance():
-    print("DEBUG: /eth_wallet_balance called")
     
     if not ETHEREUM_ENABLED:
         return jsonify({"error": "Ethereum modules not available"}), 500
         
     wallet_file = request.json.get("wallet_file")  # es. "localhost_weth3.json"
-    network = request.json.get("network")           # es. "localhost"
-    
-    print(f"DEBUG: Requested wallet: {wallet_file}, network: {network}")
-    
+    network = request.json.get("network")           # es. "localhost"    
     if not wallet_file:
         return jsonify({"error": "No wallet selected"}), 400
 
     try:
-        # ✅ CORREZIONE: costruisci il path completo QUI
-        wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
-        print(f"DEBUG: Full wallet path: {wallet_path}")
-        print(f"DEBUG: File exists: {os.path.exists(wallet_path)}")
         
-        # ✅ Passa il path completo
+        wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
+        
+        
         balance = get_eth_wallet_balance(wallet_path, network)
-        print(f"DEBUG: Balance retrieved: {balance}")
         
         address = get_wallet_address(wallet_path)
-        print(f"DEBUG: Address retrieved: {address}")
         
         if balance is None or address is None:
             return jsonify({
@@ -345,7 +328,6 @@ def eth_wallet_balance():
         return jsonify({
             "balance": balance, 
             "address": address,
-            "network": network
         })
         
     except Exception as e:
@@ -353,7 +335,9 @@ def eth_wallet_balance():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
+# ==============================
+# ROUTE Compile and deploy Ethereum
+# ==============================
 @app.route("/eth_compile_deploy", methods=["POST"])
 def eth_compile_deploy():
     """Compile and deploy Ethereum contracts."""

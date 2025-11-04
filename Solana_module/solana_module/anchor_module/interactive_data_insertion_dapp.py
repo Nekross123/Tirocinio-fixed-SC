@@ -193,15 +193,15 @@ def parse_args(args_spec: List[Dict[str, Any]], raw_arg_values: Dict[str, Any], 
             # array or vec
             if array_length is not None:
                 if not raw:
-                    raise ValueError(f"Argomento {name} mancante")
+                    raise ValueError(f"Argument {name} missing")
                 parts = raw.split()
                 if len(parts) != array_length:
-                    raise ValueError(f"Array {name} deve avere {array_length} elementi")
+                    raise ValueError(f"Array {name} must have {array_length} elements")
                 conv = []
                 for p in parts:
                     cv = convert_type(array_type, p)
                     if cv is None:
-                        raise ValueError(f"Valore non valido {p} in {name}")
+                        raise ValueError(f"Value not valid {p} in {name}")
                     conv.append(cv)
                 final_args[name] = conv
             else:  # vec
@@ -212,38 +212,38 @@ def parse_args(args_spec: List[Dict[str, Any]], raw_arg_values: Dict[str, Any], 
                     for p in raw.split():
                         cv = convert_type(array_type, p)
                         if cv is None:
-                            raise ValueError(f"Valore non valido {p} in {name}")
+                            raise ValueError(f"Value not valid {p} in {name}")
                         conv.append(cv)
                     final_args[name] = conv
                 if name == 'shares_amounts' and instruction == 'initialize':
                     if len(final_args[name]) != len(remaining_accounts):
-                        raise ValueError("shares_amounts deve avere tanti elementi quanti i payees")
+                        raise ValueError("shares_amounts must have the same number of elements as the payees")
         else:
             kind = check_type(spec['type'])
             if kind == 'integer':
                 if raw in (None, ''):
-                    raise ValueError(f"Argomento {name} mancante")
+                    raise ValueError(f"Missing {name} parameter")
                 cv = convert_type('integer', raw)
                 if cv is None:
-                    raise ValueError(f"Intero non valido per {name}")
+                    raise ValueError(f"Integer invalid fot {name}")
                 final_args[name] = cv
             elif kind == 'boolean':
                 if raw not in ('true','false'):
-                    raise ValueError(f"Boolean {name} non selezionato")
+                    raise ValueError(f"Boolean {name} not selected")
                 final_args[name] = True if raw == 'true' else False
             elif kind == 'floating point number':
                 if raw in (None, ''):
-                    raise ValueError(f"Argomento {name} mancante")
+                    raise ValueError(f"Missing {name} parameter")
                 cv = convert_type('floating point number', raw)
                 if cv is None:
-                    raise ValueError(f"Float non valido per {name}")
+                    raise ValueError(f"Invalid float for{name}")
                 final_args[name] = cv
             elif kind == 'string':
                 if raw is None:
-                    raise ValueError(f"Argomento {name} mancante")
+                    raise ValueError(f"Missing {name} parameter")
                 final_args[name] = raw
             else:
-                raise ValueError(f"Tipo non supportato: {kind}")
+                raise ValueError(f"Unsupported type: {kind}")
     return final_args
 
 def save_transaction_result(program: str,

@@ -58,8 +58,8 @@ def fetch_required_accounts(instruction, idl):
     """
     instruction_dict = next((instr for instr in idl['instructions'] if instr['name'] == instruction), None)
     if instruction_dict is None:
-        print(f"Istruzione '{instruction}' non trovata nell'IDL.")
-        st.info(f"Istruzione '{instruction}' non trovata nell'IDL.")
+        print(f"Instruction '{instruction}' not found in IDL.")
+        st.info(f"Instruction '{instruction}' not found in IDL.")
         return []
     required_accounts = [_camel_to_snake(account['name']) for account in instruction_dict['accounts'] if account['name'] != 'systemProgram']
     return required_accounts
@@ -349,8 +349,6 @@ def generate_pda_automatically(actors ,program_name ,sol_args , args):
 
     for arg in complete_dict:
         value = complete_dict[arg]
-
-        
 
         if isinstance(value, dict):
 

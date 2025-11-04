@@ -1,9 +1,9 @@
 {
   "contract_name": "HTLC",
-  "address": "0xd1a269d9b0dfb66cFdAF89Cf0c6e6F8Df0615ad0",
-  "transaction_hash": "0x2292db7feb9431c25453f7ce3ce074a93b24216de10d99db68120e7bd502b45f",
+  "address": "0x10aCcaADfB6aCEa7d02417260101642dEE173dA5",
+  "transaction_hash": "0x5b18861f00233f18c102dbd0624b587d2ce9300fd7f78c7a23ce86e5c9dd74c4",
   "network": "localhost",
-  "deployed_at": 1761838126.869783,
+  "deployed_at": 1762168304.512841,
   "size_in_bytes": 2486,
   "abi": [
     {
@@ -57,7 +57,7 @@
       "inputs": [
         {
           "internalType": "string",
-          "name": "s",
+          "name": "secret",
           "type": "string"
         }
       ],

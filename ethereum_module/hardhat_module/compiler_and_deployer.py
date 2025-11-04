@@ -232,8 +232,8 @@ def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=F
 
 
 
-def automatic_compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None,constr_dict=None , value_in_ether=0):
-
+def automatic_compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=True, single_contract=None,constr_dict=None , value_in_ether=0):
+    
     results = []
     contracts_path = os.path.join(hardhat_base_path, "contracts")
 
@@ -241,15 +241,18 @@ def automatic_compile_and_deploy_contracts(wallet_name=None, network="localhost"
     allowed_networks = {"localhost", "sepolia", "goerli", "mainnet"}
     if network not in allowed_networks:
         return {"success": False, "error": f"Network not supported: {network}", "contracts": []}
-
     # Read contract files
     file_names, contracts_source = _read_sol_files(contracts_path, single_contract)
-    if not file_names:
-        
+    
+    
+
+    if not file_names or len(file_names) ==0:
         if single_contract:
+            st.error("No contract files found,unable to compile/deploy remember , the trace name must match the contract name in the contracts(even the uppercase/lowercase matters)")
             return {"success": False, "error": f"Contract '{single_contract}' not found", "contracts": []}
         else:
             return {"success": False, "error": "No contracts found", "contracts": []}
+
     
     # Process each contract
     for file_name, source_code in zip(file_names, contracts_source):
@@ -265,6 +268,8 @@ def automatic_compile_and_deploy_contracts(wallet_name=None, network="localhost"
         }
 
         try:
+
+            
             # Compile contract
             compiled_data = _compile_contract(contract_name, source_code)
             

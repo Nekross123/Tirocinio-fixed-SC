@@ -106,7 +106,7 @@ if selected_action == "Manage Wallets":
     
         selected_network = st.selectbox(
                 "Select a network", 
-                ["--", "localhost", "sepolia", "goerli", "mainnet"]
+                ["--", "localhost", "devnet", "mainnet"]
             )
         
         if selected_wallet_file != "--" and st.button("Show balance and address"):
@@ -147,10 +147,10 @@ elif selected_action == "Upload new contract":
             with open(contract_path, 'w', encoding='utf-8') as f:
                 f.write(contract_content)
             
-            st.success(f"✅ Contract uploaded successfully!")
-            st.info(f"📁 **File name**: {contract_name}")
-            st.info(f"📂 **Saved to**: `{contract_path}`")
-            st.info(f"🔧 You can now compile and deploy this contract in the 'Compile & Deploy' section.")
+            st.success(f"Contract uploaded successfully!")
+            st.info(f" **File name**: {contract_name}")
+            st.info(f" **Saved to**: `{contract_path}`")
+            st.info(f" You can now compile and deploy this contract in the 'Compile & Deploy' section.")
             
         except Exception as e:
             st.error(f"❌ Error saving contract: {e}")
@@ -184,7 +184,7 @@ elif selected_action == "Compile & Deploy":
             # Show list of all contracts that will be compiled
             contract_files = [f for f in os.listdir(CONTRACTS_PATH) if f.endswith(".sol")]
             if contract_files:
-                st.info("📋 Contracts that will be compiled and deployed:")
+                st.info("Contracts that will be compiled and deployed:")
                 for i, contract in enumerate(contract_files, 1):
                     st.write(f"{i}. `{contract}`")
             else:
@@ -198,7 +198,7 @@ elif selected_action == "Compile & Deploy":
         constructor_valid = True
         
         if deploy_flag and compile_mode == "Single contract" and selected_contract_file != "--":
-            st.markdown("### 🔧 Constructor Parameters")
+            st.markdown("### Constructor Parameters")
             
             # Try to compile contract to get ABI and check constructor parameters
             try:
@@ -236,10 +236,10 @@ elif selected_action == "Compile & Deploy":
                             # Store in session state for deployment
                             st.session_state[f'constructor_args_{contract_name}'] = constructor_args
                     else:
-                        st.warning("⚠️ Could not compile contract to detect constructor parameters. Using defaults.")
+                        st.warning(" Could not compile contract to detect constructor parameters. Using defaults.")
                         
             except Exception as e:
-                st.warning(f"⚠️ Could not analyze constructor parameters: {str(e)}")
+                st.warning(f" Could not analyze constructor parameters: {str(e)}")
 
         # Button conditions
         if compile_mode == "All contracts":
@@ -252,9 +252,9 @@ elif selected_action == "Compile & Deploy":
 
         if can_proceed and st.button("Compile & Deploy"):
             if compile_mode == "Single contract":
-                st.info(f"⚡ Starting compilation and deployment of `{selected_contract_file}`... ⏳")
+                st.info(f" Starting compilation and deployment of `{selected_contract_file}`... ⏳")
             else:
-                st.info(f"⚡ Starting compilation and deployment of {len(contract_files)} contracts... ⏳")
+                st.info(f" Starting compilation and deployment of {len(contract_files)} contracts... ⏳")
             
             progress_bar = st.empty()
             status_placeholder = st.empty()
@@ -262,9 +262,9 @@ elif selected_action == "Compile & Deploy":
             # STEP 1: Compilation
             progress_bar.progress(30)
             if compile_mode == "Single contract":
-                status_placeholder.info(f"📦 Compiling contract `{selected_contract_file}`...")
+                status_placeholder.info(f" Compiling contract `{selected_contract_file}`...")
             else:
-                status_placeholder.info(f"📦 Compiling {len(contract_files)} contracts...")
+                status_placeholder.info(f" Compiling {len(contract_files)} contracts...")
 
             try:
                 compile_payload = {

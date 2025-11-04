@@ -15,9 +15,9 @@ contract HTLC {
        reveal_timeout = block.number + delay;
    }
 
-   function reveal(string memory s) public {
+   function reveal(string memory secret) public {
        require (msg.sender==owner);
-       require(keccak256(abi.encodePacked(s))==hash);
+       require(keccak256(abi.encodePacked(secret))==hash);
        (bool success,) = owner.call{value: address(this).balance}("");
        require (success, "Transfer failed.");
    }

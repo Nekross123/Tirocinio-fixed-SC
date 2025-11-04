@@ -114,18 +114,23 @@ st.header(f"{selected_action}")
 
 if selected_action == "Manage Wallets":
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
+
     selected_wallet_file = st.selectbox("Select wallet", ["--"] + wallet_files)
+    selected_network = st.selectbox(
+        "Select a network", 
+        ["--", "localhost", "devnet", "mainnet"] )
+    
     
     if selected_wallet_file != "--" and st.button("Show balance and PubKey"):
         try:
             res = requests.post(
                 "http://127.0.0.1:5000/wallet_balance",
-                json={"wallet_file": selected_wallet_file}
+                json={"wallet_file": selected_wallet_file , "network": selected_network}
             )
             if res.status_code == 200:
                 data = res.json()
                 st.success(f"SOL Balance: {data['balance']} SOL")
-                st.info(f"Public Key: {data['pubkey']}")
+                st.info(f"Public Key: {data['address']}")
             else:
                 st.error(res.json().get("error", "Unknown error"))
         except requests.exceptions.RequestException as e:
@@ -525,7 +530,7 @@ elif selected_action == "Interactive Data Insertion":
                         "send_now": send_now
                     }
 
-                    # Call Flask backend
+                   
                     response = requests.post(
                         "http://127.0.0.1:5000/interactive_transaction",
                         json=payload

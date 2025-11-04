@@ -50,7 +50,7 @@
     "inputs": [
       {
         "internalType": "string",
-        "name": "s",
+        "name": "secret",
         "type": "string"
       }
     ],

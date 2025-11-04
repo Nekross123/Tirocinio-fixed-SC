@@ -279,7 +279,7 @@ def interact_with_contract(contract_deployment_id, function_name, param_values, 
                 raise ValueError(f"View function call failed: {str(e)}")
         
         else:
-            # Send transaction using metaTransaction (Prof. Pinna's approach)
+            # Send transaction using metaTransaction 
             try:
                 # Convert value to wei
                 value_wei = w3.to_wei(float(value_eth), 'ether') if value_eth else 0

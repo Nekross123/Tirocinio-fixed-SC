@@ -27,11 +27,6 @@ def is_constructor_payable(abi_data) -> bool:
     return False
 
 
-
-
-
-
-
 def automatic_constructor_collector(contract_name: str, abi_data: List[Dict] , constr_dict) -> Optional[List[Any]]:
     
     constructor_inputs = _get_constructor_parameters_from_abi(abi_data)
