@@ -1,9 +1,9 @@
 {
   "contract_name": "storage",
-  "address": "0x1967D06b1fabA91eAadb1be33b277447ea24fa0e",
-  "transaction_hash": "0x714824edde2dcbaa69cf970a57fc4d68ba332b6f13e11a98074821ab1a91105a",
+  "address": "0x47AFf4EbA9820a24E5A383B1bE3f226bEFAe148A",
+  "transaction_hash": "0x37695ef8c15aace16741a6d4c713f83c18d98115822d400211cfc7b283e43bce",
   "network": "localhost",
-  "deployed_at": 1761478683.953897,
+  "deployed_at": 1762422228.6137016,
   "size_in_bytes": 1864,
   "abi": [
     {

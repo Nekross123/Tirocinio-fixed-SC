@@ -272,12 +272,12 @@ def addInitIfNeeded(cargo_path, program_code):
                 }
         else:
             cargo_config['dependencies']['anchor-lang'] = {
-                'version': '0.31.1',
+                'version': '0.32.1', 
                 'features': ['init-if-needed']
             }
 
         if needs_anchor_spl and 'anchor-spl' not in cargo_config['dependencies']:
-            cargo_config['dependencies']['anchor-spl'] = '0.31.1'
+            cargo_config['dependencies']['anchor-spl'] = '0.32.1'
 
         # Additional detected deps
         detected = _detect_dependencies_from_code(program_code)
@@ -290,7 +290,6 @@ def addInitIfNeeded(cargo_path, program_code):
                             'thaw_account', 'set_authority', 'spl_token::', 'token::']
         if any(t in program_code for t in token_indicators) and 'spl-token' not in cargo_config['dependencies']:
             cargo_config['dependencies']['spl-token'] = '7.0'
-
         # Features section
         cargo_config.setdefault('features', {})
         if needs_anchor_spl:

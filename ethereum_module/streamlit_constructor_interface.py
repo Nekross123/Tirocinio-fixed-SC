@@ -32,10 +32,10 @@ def automatic_constructor_collector(contract_name: str, abi_data: List[Dict] , c
     constructor_inputs = _get_constructor_parameters_from_abi(abi_data)
     
     if not constructor_inputs:
-        st.success(f"✅ Contract '{contract_name}' has no constructor parameters")
+        st.success(f"Contract '{contract_name}' has no constructor parameters")
         return []
     
-    st.subheader(f"🔧 Constructor Parameters for '{contract_name}'")
+    st.subheader(f"Constructor Parameters for '{contract_name}'")
     st.markdown("---")
     
     args = []
@@ -68,6 +68,8 @@ def automatic_constructor_collector(contract_name: str, abi_data: List[Dict] , c
             
         elif param_type == 'address':
             selected_wallet_file = constr_dict.get(constr_dict.get(param_name, "") , "")
+
+            
             wallet_path = os.path.join(wallets_path, selected_wallet_file)
 
             
@@ -117,7 +119,7 @@ def collect_constructor_args_streamlit(contract_name: str, abi_data: List[Dict])
     constructor_inputs = _get_constructor_parameters_from_abi(abi_data)
     
     if not constructor_inputs:
-        st.success(f"✅ Contract '{contract_name}' has no constructor parameters")
+        st.success(f"Contract '{contract_name}' has no constructor parameters")
         return []
     
     st.subheader(f"🔧 Constructor Parameters for '{contract_name}'")
@@ -208,7 +210,7 @@ def collect_constructor_args_streamlit(contract_name: str, abi_data: List[Dict])
     # Show summary
     if args and valid_inputs:
         st.markdown("---")
-        st.subheader("📋 Parameter Summary")
+        st.subheader("Parameter Summary")
         for i, (param, arg) in enumerate(zip(constructor_inputs, args)):
             st.markdown(f"**{param['name']}** ({param['type']}): `{arg}`")
     
@@ -226,10 +228,10 @@ def display_constructor_preview(contract_name: str, abi_data: List[Dict]) -> Non
     constructor_inputs = _get_constructor_parameters_from_abi(abi_data)
     
     if not constructor_inputs:
-        st.info(f"ℹ️ Contract '{contract_name}' has no constructor parameters")
+        st.info(f"Contract '{contract_name}' has no constructor parameters")
         return
     
-    st.markdown(f"**🔧 Constructor Parameters Required for '{contract_name}':**")
+    st.markdown(f"** Constructor Parameters Required for '{contract_name}':**")
     
     for i, param in enumerate(constructor_inputs, 1):
         param_name = param['name']
