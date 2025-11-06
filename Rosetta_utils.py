@@ -8,12 +8,8 @@ import asyncio
 from solders.pubkey import Pubkey
 from anchorpy import Wallet, Provider
 
-
+from Cardano_module.cardano_module.cardano_utils import cardano_base_path
 from Solana_module.solana_module.anchor_module.anchor_utils import anchor_base_path
-
-
-
-
 
 
 def upload_trace_file():
@@ -50,7 +46,6 @@ def upload_trace_file():
                     config_list.append(configuration.lower())
 
 
-               
             if "solana" in config_list :
                 # Save to execution_traces folder
                 traces_folder = f"{anchor_base_path}/execution_traces/"
@@ -65,7 +60,15 @@ def upload_trace_file():
             if "tezos" in config_list :
                 print("add tezos path")
             if "cardano" in config_list :
-                print("add cardano path")
+                # Save to execution_traces folder
+                traces_folder = f"{cardano_base_path}/execution_traces/"
+                os.makedirs(traces_folder, exist_ok=True)
+
+                file_path = os.path.join(traces_folder, uploaded_file.name)
+
+                # Save the file
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(json_data, f, indent=2)
             if "evm" in config_list :
                 print("add evm path")
                

@@ -1,6 +1,8 @@
 ﻿# Ambiente virtuale Python
 venv/
 env/
+.venv/
+.envrc
 */ambientevirtuale*/
 ambientevirtualeRosetta/
 *.pyc

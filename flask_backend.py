@@ -56,6 +56,21 @@ except ImportError as e:
     print(f"Tezos modules not available: {e}")
     TEZOS_ENABLED = False
 
+# Cardano imports
+try:
+    from tezos_module.tezos_interface import (
+        compile_and_deploy_tezos_contracts,
+        fetch_tezos_contracts,
+        fetch_tezos_entrypoints,
+        fetch_tezos_contract_context,
+        interact_with_tezos_contract,
+        is_tezos_available
+    )
+    CARDANO_ENABLED = True
+except ImportError as e:
+    print(f"Cardano modules not available: {e}")
+    CARDANO_ENABLED = False
+
 app = Flask(__name__)
 
 WALLETS_PATH = os.path.join("Solana_module", "solana_module", "solana_wallets")
@@ -569,6 +584,11 @@ def tezos_interact_contract():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": f"Internal error: {str(e)}"}), 500
+
+# ==============================
+# CARDANO ROUTES
+# ==============================
+
 
 
 if __name__ == "__main__":
