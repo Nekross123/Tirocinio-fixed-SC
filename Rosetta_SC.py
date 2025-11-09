@@ -20,10 +20,7 @@ from  Solana_module.solana_module.solana_utils import load_keypair_from_file, cr
 import  Solana_module.solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
 
 
-TRACES_PATH = os.path.join( "Solana_module","solana_module", "anchor_module", "execution_traces")
-
-
-
+TRACES_PATH = os.path.join("Solana_module", "solana_module", "anchor_module", "execution_traces")
 
 
 # ==============================
