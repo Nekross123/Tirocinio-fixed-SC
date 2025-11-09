@@ -1,4 +1,3 @@
-
 import streamlit as st
 import os
 import sys
@@ -115,18 +114,23 @@ st.header(f"{selected_action}")
 
 if selected_action == "Manage Wallets":
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
+
     selected_wallet_file = st.selectbox("Select wallet", ["--"] + wallet_files)
+    selected_network = st.selectbox(
+        "Select a network", 
+        ["--", "localhost", "devnet", "mainnet"] )
+    
     
     if selected_wallet_file != "--" and st.button("Show balance and PubKey"):
         try:
             res = requests.post(
                 "http://127.0.0.1:5000/wallet_balance",
-                json={"wallet_file": selected_wallet_file}
+                json={"wallet_file": selected_wallet_file , "network": selected_network}
             )
             if res.status_code == 200:
                 data = res.json()
                 st.success(f"SOL Balance: {data['balance']} SOL")
-                st.info(f"Public Key: {data['pubkey']}")
+                st.info(f"Public Key: {data['address']}")
             else:
                 st.error(res.json().get("error", "Unknown error"))
         except requests.exceptions.RequestException as e:
@@ -154,13 +158,13 @@ elif selected_action == "Upload new contract":
             with open(program_path, 'w', encoding='utf-8') as f:
                 f.write(program_content)
             
-            st.success(f"✅ Program uploaded successfully!")
-            st.info(f"📁 **File name**: {program_name}")
-            st.info(f"📂 **Saved to**: `{program_path}`")
-            st.info(f"🔧 You can now compile and deploy this program in the 'Compile & Deploy' section.")
+            st.success(f" Program uploaded successfully!")
+            st.info(f" **File name**: {program_name}")
+            st.info(f" **Saved to**: `{program_path}`")
+            st.info(f" You can now compile and deploy this program in the 'Compile & Deploy' section.")
             
         except Exception as e:
-            st.error(f"❌ Error saving program: {e}")
+            st.error(f" Error saving program: {e}")
 
 elif selected_action == "Compile & Deploy":
     
@@ -202,9 +206,9 @@ elif selected_action == "Compile & Deploy":
 
     if can_proceed and st.button("Compile & Deploy"):
         if compile_mode == "Single program":
-            st.info(f"⚡ Starting compilation and deployment of `{selected_program_file}`... ⏳")
+            st.info(f" Starting compilation and deployment of `{selected_program_file}`... ")
         else:
-            st.info(f"⚡ Starting compilation and deployment of {len(program_files)} programs... ⏳")
+            st.info(f" Starting compilation and deployment of {len(program_files)} programs... ")
         
         progress_bar = st.empty()
         status_placeholder = st.empty()
@@ -212,9 +216,9 @@ elif selected_action == "Compile & Deploy":
         # STEP 1: Compilation
         progress_bar.progress(30)
         if compile_mode == "Single program":
-            status_placeholder.info(f"📦 Compiling program `{selected_program_file}`...")
+            status_placeholder.info(f"Compiling program `{selected_program_file}`...")
         else:
-            status_placeholder.info(f"📦 Compiling {len(program_files)} programs...")
+            status_placeholder.info(f"Compiling {len(program_files)} programs...")
 
         try:
             compile_payload = {
@@ -239,13 +243,13 @@ elif selected_action == "Compile & Deploy":
 
             st.empty()
             if compile_mode == "Single program":
-                status_placeholder.success(f"✅ Compilation completed for `{selected_program_file}`!")
+                status_placeholder.success(f"Compilation completed for `{selected_program_file}`!")
             else:
                 compiled_count = len([p for p in compile_res["programs"] if p["compiled"]])
-                status_placeholder.success(f"✅ Compilation completed: {compiled_count}/{len(compile_res['programs'])} programs!")
+                status_placeholder.success(f"Compilation completed: {compiled_count}/{len(compile_res['programs'])} programs!")
         else:
             st.empty()
-            status_placeholder.error(f"❌ Error during compilation: {compile_res.get('error', 'Unknown error')}")
+            status_placeholder.error(f" Error during compilation: {compile_res.get('error', 'Unknown error')}")
             print("Compilation JSON details:", compile_res)
             st.stop()
         
@@ -256,9 +260,9 @@ elif selected_action == "Compile & Deploy":
         if deploy_flag:
             progress_bar.progress(70)
             if compile_mode == "Single program":
-                status_placeholder.info(f"🚀 Deploying program `{selected_program_file}`...")
+                status_placeholder.info(f"Deploying program `{selected_program_file}`...")
             else:
-                status_placeholder.info(f"🚀 Deploying {len(program_files)} programs...")
+                status_placeholder.info(f"Deploying {len(program_files)} programs...")
             
             try:
                 deploy_payload = {
@@ -289,20 +293,20 @@ elif selected_action == "Compile & Deploy":
                     all_successful = prog.get('anchorpy_initialized', False) and prog.get('compiled', False) and prog.get('deployed', False)
                     if prog.get('errors'):
                         has_errors = True
-                        st.subheader("❌ Errors encountered:")
+                        st.subheader(" Errors encountered:")
                         for error in prog['errors']:
-                            st.error(f"🔴 {error.strip()}")
+                            st.error(f" {error.strip()}")
                     
                     if deploy_res["success"] and prog.get('deployed', False):
                         program_id = prog.get('program_id', 'N/A')
-                        status_placeholder.success(f"🎉 Deployment completed! Program ID: {program_id}")
+                        status_placeholder.success(f" Deployment completed! Program ID: {program_id}")
                     elif deploy_res["success"] and prog.get('compiled', False) and not prog.get('deployed', False):
-                        status_placeholder.warning(f"⚠️ Compilation succeeded but deployment failed")
+                        status_placeholder.warning(f" Compilation succeeded but deployment failed")
                     elif not deploy_res["success"]:
-                        status_placeholder.error(f"❌ Operation failed")
+                        status_placeholder.error(f" Operation failed")
                 else:
                     all_successful = False
-                    status_placeholder.error("❌ No program data returned")
+                    status_placeholder.error(" No program data returned")
             else:
                 # Multiple programs mode
                 successful_programs = []
@@ -323,10 +327,10 @@ elif selected_action == "Compile & Deploy":
                 
                 # Show errors if any
                 if has_errors:
-                    st.subheader("❌ Errors encountered:")
+                    st.subheader(" Errors encountered:")
                     for prog in failed_programs:
                         if prog.get('errors'):
-                            st.error(f"🔴 **{prog['program']}**: {'; '.join(prog['errors'])}")
+                            st.error(f" **{prog['program']}**: {'; '.join(prog['errors'])}")
                 
                 # Show deployment results
                 if deploy_res["success"]:
@@ -334,21 +338,21 @@ elif selected_action == "Compile & Deploy":
                     total_count = len(deploy_res["programs"])
                     
                     if deployed_count == total_count:
-                        status_placeholder.success(f"🎉 All programs deployed successfully: {deployed_count}/{total_count}")
+                        status_placeholder.success(f" All programs deployed successfully: {deployed_count}/{total_count}")
                     elif deployed_count > 0:
-                        status_placeholder.warning(f"⚠️ Partial success: {deployed_count}/{total_count} programs deployed")
+                        status_placeholder.warning(f" Partial success: {deployed_count}/{total_count} programs deployed")
                     else:
-                        status_placeholder.error(f"❌ No programs deployed successfully")
+                        status_placeholder.error(f" No programs deployed successfully")
                     
                     # Show Program IDs of all deployed programs
                     if deployed_count > 0:
-                        st.subheader("📋 Successfully deployed programs:")
+                        st.subheader(" Successfully deployed programs:")
                         for prog in deploy_res["programs"]:
                             if prog.get("deployed", False) and prog.get("program_id"):
-                                st.success(f"✅ `{prog['program']}`: {prog['program_id']}")
+                                st.success(f" `{prog['program']}`: {prog['program_id']}")
                 else:
                     all_successful = False
-                    status_placeholder.error(f"❌ Operation failed")
+                    status_placeholder.error(f" Operation failed")
             
             print("Compile & deploy JSON details:", json.dumps(deploy_res, indent=2))
 
@@ -359,11 +363,11 @@ elif selected_action == "Compile & Deploy":
         # Only show success if all operations completed successfully and no errors
         if deploy_flag:
             if all_successful and not has_errors:
-                st.success("✅ Operation completed successfully!")
+                st.success(" Operation completed successfully!")
             elif has_errors:
-                st.error("❌ Operation completed with errors")
+                st.error(" Operation completed with errors")
             else:
-                st.warning("⚠️ Operation completed with some failures")
+                st.warning(" Operation completed with some failures")
         else:
             # Only compilation was requested
             compile_successful = True
@@ -383,11 +387,11 @@ elif selected_action == "Compile & Deploy":
                         compile_has_errors = True
             
             if compile_successful and not compile_has_errors:
-                st.success("✅ Compilation completed successfully!")
+                st.success(" Compilation completed successfully!")
             elif compile_has_errors:
-                st.error("❌ Compilation completed with errors")
+                st.error(" Compilation completed with errors")
             else:
-                st.warning("⚠️ Compilation completed with some failures")
+                st.warning(" Compilation completed with some failures")
 
 
 elif selected_action == "Execution Traces":
@@ -526,7 +530,7 @@ elif selected_action == "Interactive Data Insertion":
                         "send_now": send_now
                     }
 
-                    # Call Flask backend
+                   
                     response = requests.post(
                         "http://127.0.0.1:5000/interactive_transaction",
                         json=payload
@@ -551,19 +555,19 @@ elif selected_action == "Interactive Data Insertion":
 
                             if result['sent']:
                                 tx_hash = result['hash']
-                                result_placeholder.success(f"✅ Transaction sent successfully!")
+                                result_placeholder.success(f" Transaction sent successfully!")
                                 st.code(tx_hash, language=None)
 
                                 # Show saved file info
                                 if result.get('saved_file'):
-                                    st.success(f"📁 Result saved in: `execution_traces_results/{result['saved_file']}`")
+                                    st.success(f"Result saved in: `execution_traces_results/{result['saved_file']}`")
                                 elif result.get('save_error'):
-                                    st.warning(f"⚠️ Transaction sent but save failed: {result['save_error']}")
+                                    st.warning(f" Transaction sent but save failed: {result['save_error']}")
                             else:
                                 if not result['is_deployed']:
-                                    result_placeholder.warning("⚠️ Program not deployed: transaction not sent")
+                                    result_placeholder.warning(" Program not deployed: transaction not sent")
                                 else:
-                                    result_placeholder.success("✅ Transaction built (not sent)")
+                                    result_placeholder.success("Transaction built (not sent)")
 
                 except requests.exceptions.RequestException as e:
                     result_placeholder.error(f"Backend connection error: {e}")

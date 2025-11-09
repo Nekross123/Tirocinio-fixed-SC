@@ -1,0 +1,38 @@
+{
+  "trace_title": "bet",
+  "trace_actors": [
+    "player1",
+    "player2",
+    "oracle"
+  ],
+  "configuration": {
+    "ethereum": {
+      "network": "localhost",
+      "use": "True"
+    }
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "join",
+      "args": {},
+      "ethereum": {
+        "caller": "player1",
+        "value_eth": "1",
+        "send_transaction": true
+      }
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "win",
+      "args": {
+        "winner": "0"
+      },
+      "ethereum": {
+        "caller": "player1",
+        "value_eth": "0",
+        "send_transaction": true
+      }
+    }
+  ]
+}

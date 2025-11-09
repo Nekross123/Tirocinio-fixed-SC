@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
+# Copyright (c) 2025 Manuel Boi - Università degli Studi di Cagliari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -35,13 +35,6 @@ from Solana_module.solana_module.anchor_module.anchor_utils import anchor_base_p
 # ====================================================
 
 def compile_programs():
-    """Interactive compile -> optional AnchorPy init -> optional deploy flow.
-
-    For each .rs program under anchor_programs:
-    - anchor init and build, injecting the detected program_id into lib.rs
-    - convert IDL to AnchorPy-friendly format
-    - optionally initialize anchorpy and deploy using chosen wallet/cluster
-    """
     program_id = None
     programs_path = f"{anchor_base_path}/anchor_programs" # Path where anchor programs are placed
 
@@ -98,7 +91,6 @@ def compile_programs():
 # ====================================================
 
 def _read_rs_files(programs_path):
-    """Read all .rs programs from the given folder and return (filenames, contents)."""
     # Check if the folder exists
     if not os.path.isdir(programs_path):
         print(f"The path '{programs_path}' does not exist.")
@@ -118,7 +110,6 @@ def _read_rs_files(programs_path):
 # This function analyzes the Rust program code and automatically detects which external 
 # dependencies are needed based on the use statements and imports.
 def _detect_dependencies_from_code(program_code):
-    """Detect common Solana deps from Rust imports to prefill Cargo.toml."""
     """Detect dependencies needed based on imports in the Rust code"""
     dependencies = {}
     
@@ -146,7 +137,6 @@ def _detect_dependencies_from_code(program_code):
 
 
 def _check_for_anchor_spl_usage(program_code):
-    """Return True if the code uses anchor_spl features (Token, ATA, etc.)."""
     """Check if the program uses anchor-spl features"""
     anchor_spl_indicators = [
         'use anchor_spl',
@@ -171,10 +161,6 @@ def _check_for_anchor_spl_usage(program_code):
 # Currently detects: pyth-sdk-solana, switchboard-solana,
 # spl-token, spl-associated-token-account, and mpl-token-metadata
 def addInitIfNeeded(cargo_path, program_code):
-    """Ensure anchor-lang has init-if-needed and add detected deps/features.
-
-    Also maintains idl-build feature entries so Anchor can emit IDL for clients.
-    """
     try:
         # We modify the files, only if it exists
         if os.path.exists(cargo_path):
@@ -206,7 +192,7 @@ def addInitIfNeeded(cargo_path, program_code):
             else:
                 # anchor-lang doesn't exist, add it
                 cargo_config['dependencies']['anchor-lang'] = {
-                    'version': "0.31.1",
+                    'version': "0.32.1",
                     'features': ['init-if-needed']
                 }
                 print("Added anchor-lang dependency with init-if-needed feature")
@@ -214,8 +200,8 @@ def addInitIfNeeded(cargo_path, program_code):
             # Add anchor-spl if needed and not already present
             if needs_anchor_spl:
                 if 'anchor-spl' not in cargo_config['dependencies']:
-                    cargo_config['dependencies']['anchor-spl'] = "0.31.1"
-                    print(f"Added dependency: anchor-spl = \"0.31.1\"")
+                    cargo_config['dependencies']['anchor-spl'] = "0.32.1"
+                    print(f"Added dependency: anchor-spl = \"0.32.1\"")
                 
                 # Ensure features section exists
                 if 'features' not in cargo_config:
@@ -311,7 +297,6 @@ def addInitIfNeeded(cargo_path, program_code):
 
 
 def _compile_program(program_name, operating_system, program):
-    """Initialize anchor project, update Cargo.toml, then build and return program_id."""
     # Initialization phase
     done = _perform_anchor_initialization(program_name, operating_system)
     if not done:
@@ -332,7 +317,6 @@ def _compile_program(program_name, operating_system, program):
     return True, program_id
 
 def _perform_anchor_initialization(program_name, operating_system):
-    """Run the anchor init sequence inside the .anchor_files/<program>/ folder."""
     # Define Anchor initialization commands to be executed
     initialization_commands = [
         f"mkdir -p {anchor_base_path}/.anchor_files/{program_name}", # Create folder for new program
@@ -349,7 +333,6 @@ def _perform_anchor_initialization(program_name, operating_system):
     
 
 def _perform_anchor_build(program_name, program, operating_system):
-    """Write lib.rs with program_id and run anchor build; handle -Znext fallback."""
     # Define Anchor build commands to be executed
     build_commands = [
         f"cd {anchor_base_path}/.anchor_files/{program_name}/anchor_environment",  # Change directory to new anchor environment
@@ -364,7 +347,6 @@ def _perform_anchor_build(program_name, program, operating_system):
     return _run_anchor_build_commands(program_name, program, operating_system, build_concatenated_command)
 
 def _run_anchor_initialization_commands(operating_system, initialization_concatenated_command):
-    """Execute init commands; return True even if stderr contains harmless warnings."""
     # Initialize Anchor project
     print("Initializing Anchor project...")
     result = run_command(operating_system, initialization_concatenated_command)
@@ -380,7 +362,6 @@ def _run_anchor_initialization_commands(operating_system, initialization_concate
     return True # Sometimes stderr is just a warning, so we return true anyway
 
 def _run_anchor_build_commands(program_name, program, operating_system, build_concatenated_command):
-    """Execute anchor build commands and try Cargo.lock version fallback on -Znext."""
     print("Building Anchor program, this may take a while... Please be patient.")
     program_id = _write_program_in_lib_rs(program_name, program)
     result = run_command(operating_system, build_concatenated_command)
@@ -397,7 +378,6 @@ def _run_anchor_build_commands(program_name, program, operating_system, build_co
     return True, program_id # Sometimes stderr is just a warning, so we return true anyway
 
 def _write_program_in_lib_rs(program_name, program):
-    """Overwrite lib.rs with the updated Rust source containing the program_id."""
     program, program_id = _update_program_id(program_name, program)
     lib_rs_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/programs/anchor_environment/src/lib.rs"
     with open(lib_rs_path, 'w') as file:
@@ -405,7 +385,6 @@ def _write_program_in_lib_rs(program_name, program):
     return program_id
 
 def _update_program_id(program_name, program):
-    """Pull program_id from generated lib.rs and inject it into the provided code."""
     file_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/programs/anchor_environment/src/lib.rs"
 
     # Read program id generated by Anchor
@@ -422,7 +401,6 @@ def _update_program_id(program_name, program):
     return program, new_program_id
 
 def _impose_cargo_lock_version(program_name):
-    """Force Cargo.lock 'version = 3' lines to mitigate -Znext related errors."""
     file_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/Cargo.lock"
     with open(file_path, 'r', encoding='utf-8') as file:
         lines = file.readlines()
@@ -434,7 +412,6 @@ def _impose_cargo_lock_version(program_name):
             file.write(line)
 
 def _convert_idl_for_anchorpy(program_name):
-    """Convert Anchor v31-style IDL into the v29 format consumed by AnchorPy."""
     idl_file_path = f'{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/target/idl/{program_name}.json'
 
     if not os.path.exists(idl_file_path):
@@ -543,7 +520,6 @@ def _convert_idl_for_anchorpy(program_name):
 
 
 def _snake_to_camel(snake_str):
-    """Helper to convert snake_case to camelCase (IDL accounts)."""
     return re.sub(r'_([a-z])', lambda match: match.group(1).upper(), snake_str)
 
 
@@ -552,7 +528,6 @@ def _snake_to_camel(snake_str):
 # ====================================================
 
 def _initialize_anchorpy(program_name, program_id, operating_system):
-    """Run anchorpy client-gen to generate Python client code for the program."""
     idl_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/target/idl/{program_name}.json"
     output_directory = f"{anchor_base_path}/.anchor_files/{program_name}/anchorpy_files/"
     anchorpy_initialization_command = f"anchorpy client-gen {idl_path} {output_directory} --program-id {program_id}"
@@ -560,7 +535,6 @@ def _initialize_anchorpy(program_name, program_id, operating_system):
     _run_initializing_anchorpy_commands(operating_system, anchorpy_initialization_command)
 
 def _run_initializing_anchorpy_commands(operating_system, anchorpy_initialization_command):
-    """Execute anchorpy client-gen command and print stderr if present."""
     print("Initializing anchorpy...")
     result = run_command(operating_system, anchorpy_initialization_command)
     if result is None:
@@ -576,7 +550,6 @@ def _run_initializing_anchorpy_commands(operating_system, anchorpy_initializatio
 # ====================================================
 
 def _deploy_program(program_name, operating_system):
-    """Ask for wallet and cluster, write Anchor.toml, then run anchor deploy."""
     wallet_name = choose_wallet()
     if wallet_name is None:
         return
@@ -600,7 +573,6 @@ def _deploy_program(program_name, operating_system):
     _run_deploying_commands(operating_system, deploy_concatenated_command)
 
 def _modify_cluster_wallet(program_name, cluster, wallet_name):
-    """Write chosen cluster and wallet path into Anchor.toml."""
     file_path = f"{anchor_base_path}/.anchor_files/{program_name}/anchor_environment/Anchor.toml"
     config = toml.load(file_path)
 
@@ -613,7 +585,6 @@ def _modify_cluster_wallet(program_name, cluster, wallet_name):
         toml.dump(config, file)
 
 def _run_deploying_commands(operating_system, deploy_concatenated_command):
-    """Run anchor deploy; parse and print Program ID and Signature on success."""
     print("Deploying program...")
     result = run_command(operating_system, deploy_concatenated_command)
     if result is None:
@@ -630,7 +601,6 @@ def _run_deploying_commands(operating_system, deploy_concatenated_command):
         return program_id
 
 def _get_deploy_details(output):
-    """Parse Program Id and Signature from anchor CLI output."""
     # RegEx to find Program ID and signature
     program_id_pattern = r"Program Id: (\S+)"
     signature_pattern = r"Signature: (\S+)"

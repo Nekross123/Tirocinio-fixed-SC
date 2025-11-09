@@ -12,7 +12,7 @@ sys.path.append(root_path)
 # Import Ethereum modules
 # ==============================
 try:
-    from ethereum_module.hardhat_module.compiler_and_deployer import compile_and_deploy_contracts
+    from ethereum_module.hardhat_module.compiler_and_deployer import compile_contract,deploy_contracts
     import ethereum_module.ethereum_utils as eth_utils
     from ethereum_module.hardhat_module.contract_utils import (
         fetch_deployed_contracts,
@@ -26,7 +26,8 @@ try:
     from ethereum_module.streamlit_constructor_interface import (
         collect_constructor_args_streamlit,
         display_constructor_preview,
-        validate_constructor_args
+        validate_constructor_args,
+        is_constructor_payable
     )
 except ImportError as e:
     st.error(f"Ethereum modules not found. Please ensure the Toolchain is properly set up: {e}")
@@ -84,7 +85,7 @@ st.title("⚡ Ethereum Toolchain")
 st.sidebar.header("Menu")
 selected_action = st.sidebar.radio(
     "Select Action",
-    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion")
+    ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion", "Execution Traces")
 )
 
 WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
@@ -102,17 +103,24 @@ if selected_action == "Manage Wallets":
     else:
         wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
         selected_wallet_file = st.selectbox("Select wallet", ["--"] + wallet_files)
+    
+        selected_network = st.selectbox(
+                "Select a network", 
+                ["--", "localhost", "devnet", "mainnet"]
+            )
         
         if selected_wallet_file != "--" and st.button("Show balance and address"):
             try:
                 res = requests.post(
                     "http://127.0.0.1:5000/eth_wallet_balance",
-                    json={"wallet_file": selected_wallet_file}
+                    json={"wallet_file": selected_wallet_file , "network": selected_network}
                 )
                 if res.status_code == 200:
+
                     data = res.json()
                     st.success(f"ETH Balance: {data['balance']} ETH")
                     st.info(f"Address: {data['address']}")
+                    
                 else:
                     st.error(res.json().get("error", "Unknown error"))
             except requests.exceptions.RequestException as e:
@@ -124,7 +132,6 @@ elif selected_action == "Upload new contract":
     uploaded_file = st.file_uploader(
         "Choose a Solidity file (.sol)", 
         type="sol",
-        help="Upload a .sol file containing your smart contract code"
     )
     
     if uploaded_file is not None:
@@ -140,13 +147,13 @@ elif selected_action == "Upload new contract":
             with open(contract_path, 'w', encoding='utf-8') as f:
                 f.write(contract_content)
             
-            st.success(f"✅ Contract uploaded successfully!")
-            st.info(f"📁 **File name**: {contract_name}")
-            st.info(f"📂 **Saved to**: `{contract_path}`")
-            st.info(f"🔧 You can now compile and deploy this contract in the 'Compile & Deploy' section.")
+            st.success(f"Contract uploaded successfully!")
+            st.info(f" **File name**: {contract_name}")
+            st.info(f" **Saved to**: `{contract_path}`")
+            st.info(f" You can now compile and deploy this contract in the 'Compile & Deploy' section.")
             
         except Exception as e:
-            st.error(f"❌ Error saving contract: {e}")
+            st.error(f" Error saving contract: {e}")
 
 elif selected_action == "Compile & Deploy":
     if not os.path.exists(WALLETS_PATH):
@@ -162,267 +169,133 @@ elif selected_action == "Compile & Deploy":
             ["--", "localhost", "sepolia", "goerli", "mainnet"]
         )
 
-        st.markdown("----")
-        # Choose compilation mode
-        compile_mode = st.radio(
-            "Compilation mode:",
-            ("All contracts", "Single contract"),
-            help="Choose whether to compile all contracts or just a specific one"
-        )
-
-        selected_contract_file = None
-        if compile_mode == "Single contract":
-            contract_files = [f for f in os.listdir(CONTRACTS_PATH) if f.endswith(".sol")]
-            selected_contract_file = st.selectbox("Select contract", ["--"] + contract_files)
-        else:
-            # Show list of all contracts that will be compiled
-            contract_files = [f for f in os.listdir(CONTRACTS_PATH) if f.endswith(".sol")]
-            if contract_files:
-                st.info("📋 Contracts that will be compiled and deployed:")
-                for i, contract in enumerate(contract_files, 1):
-                    st.write(f"{i}. `{contract}`")
-            else:
-                st.warning("❌ No .sol contracts found in the contracts folder")
-
-        st.markdown("----")
-        deploy_flag = st.checkbox("Also deploy after compilation", value=True)
-
-        # Constructor Parameters Section (only for single contract deployment)
-        constructor_args = []
-        constructor_valid = True
+        contract_files = [f for f in os.listdir(CONTRACTS_PATH) if f.endswith(".sol")]
+        selected_contract_file = st.selectbox("Select contract", ["--"] + contract_files)
         
-        if deploy_flag and compile_mode == "Single contract" and selected_contract_file != "--":
-            st.markdown("### 🔧 Constructor Parameters")
+        st.markdown("----")
+
+        #  LOGICA SESSIONE DI DEPLOY
+        if all([selected_wallet_file != "--", selected_network != "--", selected_contract_file != "--"]):
+            contract_name = selected_contract_file.replace('.sol', '')
+            session_key = f'deploy_session_{contract_name}'
             
-            # Try to compile contract to get ABI and check constructor parameters
-            try:
-                from ethereum_module.hardhat_module.compiler_and_deployer import _compile_contract
-                contract_name = selected_contract_file.replace('.sol', '')
-                contracts_path = os.path.join(root_path, "ethereum_module", "hardhat_module", "contracts")
-                contract_file_path = os.path.join(contracts_path, selected_contract_file)
+            # 1. CREAZIONE SESSIONE
+            if session_key not in st.session_state:
+                st.info(" Click to initialize deployment session")
                 
-                if os.path.exists(contract_file_path):
-                    with open(contract_file_path, 'r', encoding='utf-8') as f:
-                        source_code = f.read()
-                    
-                    compiled_data = _compile_contract(contract_name, source_code)
-                    
-                    if compiled_data and 'abi' in compiled_data:
-                        # Show constructor parameter preview
-                        display_constructor_preview(contract_name, compiled_data['abi'])
-                        
-                        # Collect constructor arguments if needed
-                        constructor_args = collect_constructor_args_streamlit(contract_name, compiled_data['abi'])
-                        constructor_valid = constructor_args is not None
-                        
-                        if constructor_args:
-                            # Store in session state for deployment
-                            st.session_state[f'constructor_args_{contract_name}'] = constructor_args
-                    else:
-                        st.warning("⚠️ Could not compile contract to detect constructor parameters. Using defaults.")
-                        
-            except Exception as e:
-                st.warning(f"⚠️ Could not analyze constructor parameters: {str(e)}")
+                if st.button("Initialize Deployment Session"):
+                    with st.spinner("Creating deployment session..."):
+                        try:
+                            session_payload = {
+                                "action": "create_session",
+                                "contract_file": selected_contract_file,
+                                "wallet_file": selected_wallet_file, 
+                                "network": selected_network
+                            }
 
-        # Button conditions
-        if compile_mode == "All contracts":
-            can_proceed = selected_wallet_file != "--" and selected_network != "--" and len(contract_files) > 0
-        else:
-            can_proceed = (selected_wallet_file != "--" and 
-                          selected_contract_file != "--" and 
-                          selected_network != "--" and 
-                          (not deploy_flag or constructor_valid))
-
-        if can_proceed and st.button("Compile & Deploy"):
-            if compile_mode == "Single contract":
-                st.info(f"⚡ Starting compilation and deployment of `{selected_contract_file}`... ⏳")
-            else:
-                st.info(f"⚡ Starting compilation and deployment of {len(contract_files)} contracts... ⏳")
+                           
+                            
+                            session_res = requests.post(
+                                "http://127.0.0.1:5000/eth_deployment_session", 
+                                json=session_payload,
+                                timeout=30
+                            )
+                            
+                            if session_res.status_code == 200:
+                                session_data = session_res.json()
+                                if session_data["success"]:
+                                    st.session_state[session_key] = session_data
+                                    st.rerun()  # Ricarica per mostrare il form
+                                else:
+                                    st.error(f" {session_data.get('error', 'Session creation failed')}")
+                            else:
+                                st.error(" Failed to connect to backend")
+                                
+                        except requests.exceptions.Timeout:
+                            st.error(" Session creation timeout")
+                        except Exception as e:
+                            st.error(f" Session error: {str(e)}")
             
-            progress_bar = st.empty()
-            status_placeholder = st.empty()
-
-            # STEP 1: Compilation
-            progress_bar.progress(30)
-            if compile_mode == "Single contract":
-                status_placeholder.info(f"📦 Compiling contract `{selected_contract_file}`...")
-            else:
-                status_placeholder.info(f"📦 Compiling {len(contract_files)} contracts...")
-
-            try:
-                compile_payload = {
-                    "wallet_file": selected_wallet_file,
-                    "network": selected_network,
-                    "deploy": False
-                }
-                # Add single_contract parameter if in single contract mode
-                if compile_mode == "Single contract":
-                    compile_payload["single_contract"] = selected_contract_file
-                    
-                compile_res = requests.post(
-                    "http://127.0.0.1:5000/eth_compile_deploy",
-                    json=compile_payload
+            # 2. RACCOLTA PARAMETRI (se sessione attiva)
+            elif session_key in st.session_state:
+                session_data = st.session_state[session_key]
+                
+                st.success(" Deployment session active!")
+                st.markdown("### Constructor Parameters")
+                
+                # Mostra parametri costruttore
+                display_constructor_preview(contract_name, session_data['abi'])
+                
+                # Raccogli parametri
+                constructor_args = collect_constructor_args_streamlit(
+                    contract_name, 
+                    session_data['abi']
                 )
-                compile_res = compile_res.json()
-            except requests.exceptions.RequestException as e:
-                st.error(f"Backend connection error: {e}")
-                st.stop()
-        
-            if compile_res["success"]:
-                st.empty()
-                if compile_mode == "Single contract":
-                    status_placeholder.success(f"✅ Compilation completed for `{selected_contract_file}`!")
-                else:
-                    compiled_count = len([c for c in compile_res["contracts"] if c["compiled"]])
-                    status_placeholder.success(f"✅ Compilation completed: {compiled_count}/{len(compile_res['contracts'])} contracts!")
-            else:
-                st.empty()
-                status_placeholder.error(f"❌ Error during compilation: {compile_res.get('error', 'Unknown error')}")
-                st.stop()
-            
-            progress_bar.progress(50)
-            status_placeholder.empty()
-
-            # STEP 2: Deploy (if requested)
-            if deploy_flag:
-                progress_bar.progress(70)
-                if compile_mode == "Single contract":
-                    status_placeholder.info(f"🚀 Deploying contract `{selected_contract_file}`...")
-                else:
-                    status_placeholder.info(f"🚀 Deploying {len(contract_files)} contracts...")
                 
-                try:
-                    deploy_payload = {
-                        "wallet_file": selected_wallet_file,
-                        "network": selected_network,
-                        "deploy": True
-                    }
-                    # Add single_contract parameter if in single contract mode
-                    if compile_mode == "Single contract":
-                        deploy_payload["single_contract"] = selected_contract_file
-                        
-                        # Add constructor arguments if available
-                        contract_name = selected_contract_file.replace('.sol', '')
-                        constructor_key = f'constructor_args_{contract_name}'
-                        if constructor_key in st.session_state:
-                            deploy_payload["constructor_args"] = st.session_state[constructor_key]
-                        
-                    deploy_res = requests.post(
-                        "http://127.0.0.1:5000/eth_compile_deploy",
-                        json=deploy_payload
+                # Gestisci constructor payable
+                value_in_ether = 0
+                if is_constructor_payable(session_data['abi']):
+                    value_in_ether = st.number_input(
+                        " Send ETH with deployment:",
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.1,
+                        key=f"eth_value_{contract_name}"
                     )
-                    deploy_res = deploy_res.json()
-                except requests.exceptions.RequestException as e:
-                    st.error(f"Backend connection error: {e}")
-                    st.stop()
-
-                # Check if all operations were successful
-                all_successful = True
-                has_errors = False
                 
-                if compile_mode == "Single contract":
-                    if deploy_res['contracts']:
-                        contract = deploy_res['contracts'][0]
-                        all_successful = contract.get('compiled', False) and contract.get('deployed', False)
-                        if contract.get('errors'):
-                            has_errors = True
-                            st.subheader("❌ Errors encountered:")
-                            for error in contract['errors']:
-                                st.error(f"🔴 {error.strip()}")
-                        
-                        if deploy_res["success"] and contract.get('deployed', False):
-                            contract_address = contract.get('address', 'N/A')
-                            status_placeholder.success(f"🎉 Deployment completed! Contract Address: {contract_address}")
-                        elif deploy_res["success"] and contract.get('compiled', False) and not contract.get('deployed', False):
-                            status_placeholder.warning(f"⚠️ Compilation succeeded but deployment failed")
-                        elif not deploy_res["success"]:
-                            status_placeholder.error(f"❌ Operation failed")
-                    else:
-                        all_successful = False
-                        status_placeholder.error("❌ No contract data returned")
-                else:
-                    # Multiple contracts mode
-                    successful_contracts = []
-                    failed_contracts = []
+                # 3. DEPLOY
+                if st.button(" Deploy Contract", type="primary") and constructor_args is not None:
                     
-                    for contract in deploy_res.get("contracts", []):
-                        contract_all_success = contract.get('compiled', False) and contract.get('deployed', False)
-                        
-                        if contract.get('errors'):
-                            has_errors = True
-                            failed_contracts.append(contract)
-                        
-                        if contract_all_success:
-                            successful_contracts.append(contract)
-                        else:
-                            failed_contracts.append(contract)
-                            all_successful = False
-                    
-                    # Show errors if any
-                    if has_errors:
-                        st.subheader("❌ Errors encountered:")
-                        for contract in failed_contracts:
-                            if contract.get('errors'):
-                                st.error(f"🔴 **{contract['contract']}**: {'; '.join(contract['errors'])}")
-                    
-                    # Show deployment results
-                    if deploy_res["success"]:
-                        deployed_count = len([c for c in deploy_res["contracts"] if c.get("deployed", False)])
-                        total_count = len(deploy_res["contracts"])
-                        
-                        if deployed_count == total_count:
-                            status_placeholder.success(f"🎉 All contracts deployed successfully: {deployed_count}/{total_count}")
-                        elif deployed_count > 0:
-                            status_placeholder.warning(f"⚠️ Partial success: {deployed_count}/{total_count} contracts deployed")
-                        else:
-                            status_placeholder.error(f"❌ No contracts deployed successfully")
-                        
-                        # Show Contract Addresses of all deployed contracts
-                        if deployed_count > 0:
-                            st.subheader("📋 Successfully deployed contracts:")
-                            for contract in deploy_res["contracts"]:
-                                if contract.get("deployed", False) and contract.get("address"):
-                                    st.success(f"✅ `{contract['contract']}`: {contract['address']}")
-                    else:
-                        all_successful = False
-                        status_placeholder.error(f"❌ Operation failed")
+                    with st.spinner("Deploying contract..."):
+                        try:
+                            deploy_payload = {
+                                "action": "deploy",
+                                "session_id": session_data["session_id"],
+                                "constructor_args": constructor_args,
+                                "value_in_ether": value_in_ether
+                            }
 
-            progress_bar.progress(100)
-            status_placeholder.empty()
-            progress_bar.empty()
+                           
+                            
+                            deploy_res = requests.post(
+                                "http://127.0.0.1:5000/eth_deployment_session", 
+                                json=deploy_payload,
+                                timeout=120  # Timeout lungo per il deploy
+                            )
+                            
+                            if deploy_res.status_code == 200:
+                                deploy_result = deploy_res.json()
+                                
+                                if deploy_result["success"]:
+                                    st.success(" Contract deployed successfully!")
+                                    
+                                    # Mostra dettagli deploy
+                                    if deploy_result.get("address"):
+                                        st.info(f"Contract Address:{deploy_result["address"]}" )
+                                    if deploy_result.get("transaction_hash"):
+                                            st.info(f"Transaction Hash: `{deploy_result['transaction_hash']}`")
+                                    if deploy_result.get("gas_used"):
+                                        st.info(f"Gas Used: {deploy_result['gas_used']}")
+                                    
+                                    #  Cleanup sessione
+                                    del st.session_state[session_key]
+                                    
+                                else:
+                                    st.error(f" Deployment failed: {deploy_result.get('error', 'Unknown error')}")
+                                    # Mantieni la sessione per ritentare
+                            else:
+                                st.error(" Deployment request failed")
+                                
+                        except requests.exceptions.Timeout:
+                            st.error(" Deployment timeout - transaction might still be processing")
+                        except Exception as e:
+                            st.error(f" Deployment error: {str(e)}")
             
-            # Only show success if all operations completed successfully and no errors
-            if deploy_flag:
-                if all_successful and not has_errors:
-                    st.success("✅ Operation completed successfully!")
-                elif has_errors:
-                    st.error("❌ Operation completed with errors")
-                else:
-                    st.warning("⚠️ Operation completed with some failures")
+            # Messaggio se manca qualche selezione
             else:
-                # Only compilation was requested
-                compile_successful = True
-                compile_has_errors = False
-                
-                if compile_mode == "Single contract":
-                    if compile_res.get('contracts'):
-                        contract = compile_res['contracts'][0]
-                        compile_successful = contract.get('compiled', False)
-                        if contract.get('errors'):
-                            compile_has_errors = True
-                else:
-                    for contract in compile_res.get("contracts", []):
-                        if not contract.get('compiled', False) or contract.get('errors'):
-                            compile_successful = False
-                        if contract.get('errors'):
-                            compile_has_errors = True
-                
-                if compile_successful and not compile_has_errors:
-                    st.success("✅ Compilation completed successfully!")
-                elif compile_has_errors:
-                    st.error("❌ Compilation completed with errors")
-                else:
-                    st.warning("⚠️ Compilation completed with some failures")
+                st.info("Please select wallet, network and contract to continue")
+            
+
 
 elif selected_action == "Interactive data insertion":
     st.caption("Interactive guided interface for smart contract functions.")
@@ -449,7 +322,6 @@ elif selected_action == "Interactive data insertion":
                 "Select Network",
                 available_networks,
                 index=0,  # Default to sepolia
-                help="Choose the blockchain network to interact with"
             )
             
             st.markdown("---")
@@ -458,7 +330,6 @@ elif selected_action == "Interactive data insertion":
             contract_id = st.selectbox(
                 "Select Contract",
                 ["--"] + contracts,
-                help="Choose a deployed contract to interact with"
             )
             
             if contract_id != "--":
@@ -494,7 +365,7 @@ elif selected_action == "Interactive data insertion":
                     function_name = st.selectbox(
                         "Select Function",
                         ["--"] + function_names,
-                        help="Choose a function to interact with"
+                        
                     )
                     
                     if function_name != "--":
@@ -503,7 +374,7 @@ elif selected_action == "Interactive data insertion":
                         guidance = get_function_guidance(contract_id, function_name)
                         
                         st.markdown("---")
-                        st.markdown(f"### Function: `{function_name}()`")
+                        st.markdown(f"### Function: `{function_name}`")
                         
                         # Parameters form
                         with st.form(key=f"interact_{function_name}_form"):
@@ -583,7 +454,7 @@ elif selected_action == "Interactive data insertion":
                                     "ETH Amount",
                                     value="0",
                                     placeholder="0.1",
-                                    help="Amount of ETH to send with the transaction",
+                                    
                                     key="value_eth"
                                 )
                             
@@ -596,7 +467,6 @@ elif selected_action == "Interactive data insertion":
                                 caller_wallet = st.selectbox(
                                     "Sender Wallet",
                                     ["--"] + wallet_files,
-                                    help="Wallet that will send the transaction",
                                     key="caller_wallet"
                                 )
                             
@@ -604,17 +474,18 @@ elif selected_action == "Interactive data insertion":
                                 gas_limit = st.text_input(
                                     "Gas Limit",
                                     value="300000",
-                                    help="Maximum gas for the transaction",
                                     key="gas_limit"
                                 )
                             
+                            
                             # Submit button
                             submit_button = st.form_submit_button(
-                                f"Execute {function_name}()",
-                                help=f"Send transaction to execute {function_name}"
+                                f"Execute {function_name}",
                             )
                             
                             if submit_button:
+
+
                                 # Validate inputs
                                 if caller_wallet == "--":
                                     st.error("Please select a sender wallet")
@@ -654,6 +525,64 @@ elif selected_action == "Interactive data insertion":
         st.error(f"Interactive interface not available: {e}")
     except Exception as e:
         st.error(f"Error loading interactive interface: {e}")
+
+elif selected_action == "Execution Traces":
+    st.markdown("###  Execution Traces")
+    st.caption("Select and execute Ethereum contract execution traces")
+    
+    try:
+        from ethereum_module.hardhat_module.automatic_execution_manager import (
+            get_execution_traces,
+            exec_contract_automatically
+        )
+        
+        # Get available traces
+        traces = get_execution_traces()
+        
+        if not traces:
+            st.warning("⚠️ No execution traces found in the execution_traces folder")
+            st.info("💡 Create execution trace files in `ethereum_module/hardhat_module/execution_traces/`")
+        else:
+            # Trace selection
+            st.markdown("####  Select Execution Trace")
+            selected_trace = st.selectbox(
+                "Available execution traces:",
+                ["--Select Trace--"] + traces,
+            )
+            
+            # Store in variable as requested
+            contract_deployment_id = None
+            if selected_trace != "--Select Trace--":
+                contract_deployment_id = selected_trace.replace('.json', '')
+                
+                # Display trace info
+                st.info(f" Selected trace: **{contract_deployment_id}**")
+                
+                # Execute button
+                if st.button("⚡ Execute Trace", type="primary"):
+                    with st.spinner("Executing trace..."):
+                        try:
+                            # Call the function from automatic_execution_manager
+                            result = exec_contract_automatically(contract_deployment_id)
+                            if result and result.get('success'):
+                                st.success("✅ Execution completed successfully!")
+                                
+                                # Show execution results
+                                with st.expander("📊 Execution Results", expanded=True):
+                                    st.json(result)
+                            else:
+                                error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                                st.error(f"❌ Execution failed : {error_msg}")
+                                
+                        except Exception as e:
+                            st.error(f"❌ Error executing trace: {str(e)}")
+            else:
+                st.info("Please select an execution trace to run.")
+                
+    except ImportError as e:
+        st.error(f"Execution traces module not available: {e}")
+    except Exception as e:
+        st.error(f"Error loading execution traces: {e}")
 
 
 # ==============================

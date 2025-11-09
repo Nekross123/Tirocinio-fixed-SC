@@ -1,0 +1,42 @@
+{
+  "network": "localhost*",
+  "platform": "Ethereum",
+  "trace_title": "HTLC_localhost_results",
+  "actions": [
+    {
+      "sequence_id": "1",
+      "function_name": "owner",
+      "transaction_hash": "READ_ONLY",
+      "block_number": 123,
+      "return_value": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "size_in_bytes": 146
+    },
+    {
+      "sequence_id": "2",
+      "function_name": "verifier",
+      "transaction_hash": "READ_ONLY",
+      "block_number": 123,
+      "return_value": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "size_in_bytes": 146
+    },
+    {
+      "sequence_id": "3",
+      "function_name": "hash",
+      "transaction_hash": "READ_ONLY",
+      "block_number": 123,
+      "return_value": "0xb23e4ef8b06c31404d78e9910831284fe35dc8b451af006dc9e662ac3d7a2a0d",
+      "size_in_bytes": 146
+    },
+    {
+      "sequence_id": "4",
+      "function_name": "reveal",
+      "transaction_hash": "b40d130b5f8aa0d5824be4e5a9d1bd3f50cb4c40ac96460b2acae48648690112",
+      "block_number": 124,
+      "gas_used": 27878,
+      "gas_price_gwei": 1.000000092,
+      "transaction_fee_eth": "0.000027878002564776",
+      "status": "Success",
+      "size_in_bytes": 146
+    }
+  ]
+}

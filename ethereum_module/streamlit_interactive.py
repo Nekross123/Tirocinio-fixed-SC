@@ -1,5 +1,3 @@
-# MIT License
-#
 # Streamlit implementation of Interactive Contract Interface
 # Provides guided step-by-step contract interaction - Functional Approach
 
@@ -25,10 +23,10 @@ def display_contract_selection() -> Optional[str]:
     contracts = get_available_contracts()
     
     if not contracts:
-        st.warning("🚫 No contracts deployed yet. Please deploy a contract first.")
+        st.warning("No contracts deployed yet. Please deploy a contract first.")
         return None
     
-    st.markdown("### 📋 Select Contract")
+    st.markdown("### Select Contract")
     contract = st.selectbox(
         "Available Contracts:",
         ["--Select Contract--"] + contracts,
@@ -39,7 +37,7 @@ def display_contract_selection() -> Optional[str]:
         # Show contract info
         info = get_contract_info(contract)
         
-        with st.expander("ℹ️ Contract Information", expanded=False):
+        with st.expander("Contract Information", expanded=False):
             st.markdown(f"**Address:** `{info['address']}`")
             st.markdown(f"**Network:** {info['network']}")
             if info.get('transaction_hash'):
@@ -55,7 +53,7 @@ def display_function_selection(contract_id: str) -> Optional[str]:
     if not contract_id:
         return None
     
-    st.markdown("### ⚙️ Select Function")
+    st.markdown("###Select Function")
     
     try:
         functions = fetch_functions_for_contract(contract_id)
@@ -104,19 +102,15 @@ def display_function_guidance(guidance: Dict[str, Any]) -> None:
     
     # Warnings
     if guidance['warnings']:
-        with st.expander("⚠️ Important Notes"):
+        with st.expander("Important Notes"):
             for warning in guidance['warnings']:
                 st.warning(warning)
     
     # Payable information
     if guidance['is_payable']:
-        st.info("💰 This function accepts ETH payments")
+        st.info("This function accepts ETH payments")
     
-    # Parameters info
-    if guidance['parameters']:
-        st.markdown("**Parameters Required:**")
-        for i, param in enumerate(guidance['parameters'], 1):
-            st.markdown(f"**{i}.** `{param['name']}` ({param['type']})")
+
 
 
 def collect_function_parameters(guidance: Dict[str, Any]) -> Dict[str, Any]:
@@ -124,7 +118,7 @@ def collect_function_parameters(guidance: Dict[str, Any]) -> Dict[str, Any]:
     if not guidance['parameters']:
         return {}
     
-    st.markdown("### 📝 Enter Parameters")
+    st.markdown("### Enter Parameters")
     parameters = {}
     
     for param in guidance['parameters']:
@@ -222,18 +216,20 @@ def collect_generic_parameter(param_name: str, param_type: str) -> str:
     )
 
 
-def collect_execution_settings(guidance: Dict[str, Any]) -> Dict[str, Any]:
+def collect_execution_settings(guidance: Dict[str, Any] , network) -> Dict[str, Any]:
     """Collect execution settings (wallet, gas, value)."""
-    st.markdown("### ⚙️ Execution Settings")
+    st.markdown("### Execution Settings")
     
     # Wallet selection
     wallets = get_available_wallets()
     if not wallets:
         st.error("No wallets available for execution")
         return {}
-    
-    wallet = st.selectbox("Select wallet to execute transaction:", wallets)
-    
+    if network == "localhost":
+        wallet = st.selectbox("Select wallet to execute transaction:", [w for w in wallets if w.startswith("localhost")])
+    else:
+        wallet = st.selectbox("Select wallet to execute transaction:", wallets)
+
     # ETH value (if payable)
     value_eth = "0"
     if guidance['is_payable']:
@@ -287,8 +283,8 @@ def display_execution_result(result: Dict[str, Any]) -> None:
 # ========================================
 
 def run_interactive_contract_interface() -> None:
-    """Main function to run the complete interactive interface."""
-    st.markdown("## 🔧 Interactive Contract Interface")
+    
+    st.markdown("##Interactive Contract Interface")
     
     # Step 1: Contract Selection
     contract_id = display_contract_selection()
@@ -306,12 +302,12 @@ def run_interactive_contract_interface() -> None:
         parameters = collect_function_parameters(guidance)
         
         # Step 4: Execution Settings
-        settings = collect_execution_settings(guidance)
+        settings = collect_execution_settings(guidance ,get_contract_info(contract_id)['network'])
         if not settings:
             return
         
         # Step 5: Execute
-        if st.button("🚀 Execute Transaction", type="primary"):
+        if st.button("Execute Transaction", type="primary"):
             with st.spinner("Executing transaction..."):
                 result = execute_contract_function(contract_id, function_name, parameters, settings)
                 display_execution_result(result)

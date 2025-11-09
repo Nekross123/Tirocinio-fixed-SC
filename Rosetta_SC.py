@@ -40,7 +40,7 @@ st.set_page_config(
 # ==============================
 # Titolo e descrizione
 # ==============================s
-st.title("🌹 Welcome to Rosetta Smart Contract")
+st.title("🌹𓂀 Welcome to Rosetta Smart Contract")
 st.markdown("""
 This application lets you easily manage your **Smart Contract toolchains**.
 

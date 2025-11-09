@@ -1,31 +1,10 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import os
 import re
 import json
 import subprocess
 import platform
 import time
+import streamlit as st
 from web3 import Web3
 from eth_account import Account
 from solcx import compile_source, install_solc, set_solc_version
@@ -37,8 +16,9 @@ from ethereum_module.ethereum_utils import (
     choose_network,
     wait_for_transaction_receipt
 )
-
+from ethereum_module.streamlit_constructor_interface import automatic_constructor_collector ,  _get_constructor_parameters_from_abi
 hardhat_base_path = os.path.join("ethereum_module", "hardhat_module")
+contracts_path = os.path.join(hardhat_base_path, "contracts")
 
 
 # -------------------------
@@ -89,12 +69,7 @@ def _get_constructor_args(contract_name: str):
     return constructor_defaults.get(contract_name, [])
 
 
-def _get_constructor_parameters_from_abi(abi_data):
-    """Extract constructor parameters from ABI."""
-    for item in abi_data:
-        if item.get('type') == 'constructor':
-            return item.get('inputs', [])
-    return []
+
 
 
 def _collect_constructor_args_interactive(contract_name: str, abi_data) -> list:
@@ -167,29 +142,11 @@ def _collect_constructor_args_interactive(contract_name: str, abi_data) -> list:
     return args
 
 
-# =====================================================
-# MAIN COMPILE AND DEPLOY FUNCTION
-# =====================================================
-def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=False, single_contract=None, constructor_args=None):
+def compile_contract(single_contract):
     """
-    Compile and optionally deploy Solidity contracts.
-    
-    Args:
-        wallet_name: Name of the wallet file to use for deployment
-        network: Target network (localhost, sepolia, etc.)
-        deploy: Whether to deploy contracts after compilation
-        single_contract: Name of a single contract to process (optional)
-        constructor_args: Constructor arguments for single contract deployment (optional)
+    Compile a Solidity contract using py-solc-x.
     """
-    results = []
-    contracts_path = os.path.join(hardhat_base_path, "contracts")
 
-    # Validate network
-    allowed_networks = {"localhost", "sepolia", "goerli", "mainnet"}
-    if network not in allowed_networks:
-        return {"success": False, "error": f"Network not supported: {network}", "contracts": []}
-
-    # Read contract files
     file_names, contracts_source = _read_sol_files(contracts_path, single_contract)
     if not file_names:
         if single_contract:
@@ -197,6 +154,147 @@ def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=F
         else:
             return {"success": False, "error": "No contracts found", "contracts": []}
 
+    for file_name, source_code in zip(file_names, contracts_source):
+        contract_name = _remove_extension(file_name)
+        contract_result = {
+            "contract": contract_name,
+            "compiled": False,
+            "deployed": False,
+            "address": None,
+            "transaction_hash": None,
+            "gas_used": None,
+            "errors": []
+        }
+
+        try:
+            # Detect and install Solidity version
+            solc_version = _detect_solidity_version(source_code)
+            try:
+                install_solc(solc_version)
+                set_solc_version(solc_version)
+            except Exception as e:
+                print(f"Warning: Could not install/set Solidity version {solc_version}: {e}")
+                try:
+                    install_solc("0.8.18")
+                    set_solc_version("0.8.18")
+                except:
+                    pass
+
+            # Compile the contract
+            compiled_contracts = compile_source(source_code, output_values=['abi', 'bin'])
+
+            # Find the main contract
+            contract_interface = None
+            for contract_id, interface in compiled_contracts.items():
+                if contract_name.lower() in contract_id.lower():
+                    contract_interface = interface
+                    break
+
+            if not contract_interface:
+                contract_interface = list(compiled_contracts.values())[0]
+
+            return contract_interface
+
+        except Exception as e:
+            print(f"Compilation error for {contract_name}: {e}")
+            return None
+
+
+
+# =====================================================
+# MAIN COMPILE AND DEPLOY FUNCTION
+# =====================================================
+def deploy_contracts(wallet_name=None, network="localhost", compiled_data=None, single_contract=None, constructor_args=None, value_in_ether=0):
+
+    results = []
+    # Validate network
+    allowed_networks = {"localhost", "sepolia", "goerli", "mainnet"}
+    if network not in allowed_networks:
+        return {"success": False, "error": f"Network not supported: {network}", "contracts": []}
+
+    # AGGIUNGI QUESTA PARTE PER LEGGERE IL SOURCE CODE
+    file_names, contracts_source = _read_sol_files(contracts_path, single_contract)
+
+    st.info(zip(file_names, contracts_source))
+    if not file_names:
+        return {"success": False, "error": f"Contract '{single_contract}' not found", "contracts": []}
+    
+    for file_name, source_code in zip(file_names, contracts_source):
+        contract_name = _remove_extension(file_name)
+        contract_result = {
+            "contract": contract_name,
+            "compiled": True,
+            "deployed": False,
+            "address": None,
+            "transaction_hash": None,
+            "gas_used": None,
+            "errors": []
+        }
+    
+        try:
+            if compiled_data:
+                contract_result["compiled"] = True
+                
+                # Save compiled artifacts - ORA source_code È DEFINITO QUI
+                _save_contract_artifacts(contract_name, compiled_data, source_code)
+                
+                if wallet_name:
+                    # Use provided constructor args for single contract deployment
+                    contract_constructor_args = None
+                    if single_contract and constructor_args:
+                        contract_constructor_args = constructor_args
+                    
+                    deploy_result = _deploy_contract(
+                        contract_name, 
+                        compiled_data, 
+                        wallet_name, 
+                        network,
+                        contract_constructor_args,
+                        value_in_ether
+                    )
+                    
+                    if deploy_result["success"]:
+                        contract_result["deployed"] = True
+                        contract_result["address"] = deploy_result["address"]
+                        contract_result["transaction_hash"] = deploy_result["transaction_hash"]
+                        contract_result["gas_used"] = deploy_result["gas_used"]
+                    else:
+                        contract_result["errors"].append(deploy_result["error"])
+                else:
+                    contract_result["errors"].append("No wallet specified for deployment")
+            else:
+                contract_result["errors"].append("Compilation failed")
+        except Exception as e:
+            contract_result["errors"].append(str(e))
+        
+        results.append(contract_result)
+
+    return {"success": True, "contracts": results}
+
+
+
+def automatic_compile_and_deploy_contracts(wallet_name=None, network="localhost", compiled_data = None, single_contract=None,constr_dict=None , value_in_ether=0):
+    
+    results = []
+    contracts_path = os.path.join(hardhat_base_path, "contracts")
+
+    # Validate network
+    allowed_networks = {"localhost", "sepolia", "goerli", "mainnet"}
+    if network not in allowed_networks:
+        return {"success": False, "error": f"Network not supported: {network}", "contracts": []}
+    # Read contract files
+    file_names, contracts_source = _read_sol_files(contracts_path, single_contract)
+    
+    
+
+    if not file_names or len(file_names) ==0:
+        if single_contract:
+            st.error("No contract files found,unable to compile/deploy remember , the trace name must match the contract name in the contracts(even the uppercase/lowercase matters)")
+            return {"success": False, "error": f"Contract '{single_contract}' not found", "contracts": []}
+        else:
+            return {"success": False, "error": "No contracts found", "contracts": []}
+
+    
     # Process each contract
     for file_name, source_code in zip(file_names, contracts_source):
         contract_name = _remove_extension(file_name)
@@ -211,46 +309,59 @@ def compile_and_deploy_contracts(wallet_name=None, network="localhost", deploy=F
         }
 
         try:
+
+            
             # Compile contract
-            compiled_data = _compile_contract(contract_name, source_code)
+            compiled_data = compile_contract(contract_name, source_code)
+            
+            
+            constructor_args = automatic_constructor_collector(single_contract , compiled_data['abi'] , constr_dict)
+            
             if compiled_data:
                 contract_result["compiled"] = True
+                
                 
                 # Save compiled artifacts
                 _save_contract_artifacts(contract_name, compiled_data, source_code)
                 
-                # Deploy if requested
-                if deploy:
-                    if wallet_name:
-                        # Use provided constructor args for single contract deployment
-                        contract_constructor_args = None
-                        if single_contract and constructor_args:
-                            contract_constructor_args = constructor_args
+                #start deployment
+                
+                if wallet_name:
+                    # Use provided constructor args for single contract deployment
+                    contract_constructor_args = None
+                    if single_contract and constructor_args:
+                        contract_constructor_args = constructor_args
+                    
+                    deploy_result = _deploy_contract(
+                        contract_name, 
+                        compiled_data, 
+                        wallet_name, 
+                        network,
+                        contract_constructor_args,
+                        value_in_ether
+                    )
+                    
+                    
+                    if deploy_result["success"]:
                         
-                        deploy_result = _deploy_contract(
-                            contract_name, 
-                            compiled_data, 
-                            wallet_name, 
-                            network,
-                            contract_constructor_args
-                        )
-                        
-                        if deploy_result["success"]:
-                            contract_result["deployed"] = True
-                            contract_result["address"] = deploy_result["address"]
-                            contract_result["transaction_hash"] = deploy_result["transaction_hash"]
-                            contract_result["gas_used"] = deploy_result["gas_used"]
-                        else:
-                            contract_result["errors"].append(deploy_result["error"])
+                        contract_result["deployed"] = True
+                        contract_result["address"] = deploy_result["address"]
+                        contract_result["transaction_hash"] = deploy_result["transaction_hash"]
+                        contract_result["gas_used"] = deploy_result["gas_used"]
                     else:
-                        contract_result["errors"].append("No wallet specified for deployment")
+                        contract_result["errors"].append(deploy_result["error"])
+                else:
+                    contract_result["errors"].append("No wallet specified for deployment")
             else:
+                
                 contract_result["errors"].append("Compilation failed")
 
         except Exception as e:
             contract_result["errors"].append(str(e))
 
         results.append(contract_result)
+        st.success(f" Contract: {contract_name} - Compiled: {contract_result['compiled']} - Deployed: {contract_result['deployed']}")
+        st.info(f"    Address: {contract_result['address']}")
 
     return {"success": True, "contracts": results}
 
@@ -281,48 +392,7 @@ def _read_sol_files(contracts_path, single_contract=None):
     return file_names, contracts_source
 
 
-def _compile_contract(contract_name, source_code):
-    """
-    Compile a Solidity contract using py-solc-x.
-    Based on Prof. Andrea Pinna's compiler approach from bcschool2023.
-    """
-    try:
-        # Detect and install Solidity version
-        solc_version = _detect_solidity_version(source_code)
-        
-        try:
-            install_solc(solc_version)
-            set_solc_version(solc_version)
-        except Exception as e:
-            print(f"Warning: Could not install/set Solidity version {solc_version}: {e}")
-            # Try with default version like the professor uses
-            try:
-                install_solc("0.8.18")
-                set_solc_version("0.8.18")
-            except:
-                pass
 
-        # Compile the contract - same approach as professor's compile function
-        compiled_contracts = compile_source(source_code, output_values=['abi', 'bin'])
-        
-        # Extract the main contract - following prof's pattern
-        contract_interface = None
-        
-        # Try to find contract by name first
-        for contract_id, interface in compiled_contracts.items():
-            if contract_name.lower() in contract_id.lower():
-                contract_interface = interface
-                break
-        
-        # If not found, take the first one (prof's fallback approach)
-        if not contract_interface:
-            contract_interface = list(compiled_contracts.values())[0]
-        
-        return contract_interface
-
-    except Exception as e:
-        print(f"Compilation error for {contract_name}: {e}")
-        return None
 
 
 def _save_contract_artifacts(contract_name, compiled_data, source_code):
@@ -346,15 +416,16 @@ def _save_contract_artifacts(contract_name, compiled_data, source_code):
         json.dump(bytecode_data, f, indent=2)
 
 
-def _deploy_contract(contract_name, compiled_data, wallet_name, network, constructor_args=None):
-    """Deploy a compiled contract to the specified network."""
+def _deploy_contract(contract_name, compiled_data, wallet_name, network, constructor_args, value_in_ether):
+    """Deploy a compiled contract to the specified network with improved gas handling."""
+    
     try:
         # Load wallet
         wallet_path = os.path.join("ethereum_module", "ethereum_wallets", wallet_name)
         wallet_data = load_wallet_from_file(wallet_path)
         if not wallet_data:
             return {"success": False, "error": "Could not load wallet"}
-
+        
         # Create Web3 instance
         w3 = create_web3_instance(network)
         if not w3.is_connected():
@@ -372,39 +443,56 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
 
         # Get nonce
         nonce = w3.eth.get_transaction_count(account.address)
-
-        # Get constructor parameters - use provided args or collect interactively
+        
+        # Validate constructor args
         if constructor_args is None:
             constructor_args = _collect_constructor_args_interactive(contract_name, contract_abi)
         else:
-            # Validate provided constructor args
             constructor_inputs = _get_constructor_parameters_from_abi(contract_abi)
             if len(constructor_args) != len(constructor_inputs):
                 return {"success": False, "error": f"Expected {len(constructor_inputs)} constructor arguments, got {len(constructor_args)}"}
             
             print(f"✅ Using provided constructor arguments: {constructor_args}")
 
-        # Build deployment transaction
+        # 🎯 BUILD TRANSACTION WITH ESTIMATION (come metaTransaction)
+        base_transaction = {
+            'chainId': w3.eth.chain_id,
+            'from': account.address,
+            'nonce': nonce,
+            'gasPrice': w3.eth.gas_price,
+        }
+        
+        # Add value if specified
+        if value_in_ether > 0:
+            base_transaction['value'] = w3.to_wei(value_in_ether, 'ether')
+        
+        # Build the deployment transaction without gas first
         if constructor_args:
-            transaction = contract.constructor(*constructor_args).build_transaction({
-                'from': account.address,
-                'nonce': nonce,
-                'gas': 3000000,  # Default gas limit
-                'gasPrice': w3.eth.gas_price,
-            })
+            deployment_tx = contract.constructor(*constructor_args).build_transaction(base_transaction)
         else:
-            transaction = contract.constructor().build_transaction({
-                'from': account.address,
-                'nonce': nonce,
-                'gas': 3000000,  # Default gas limit
-                'gasPrice': w3.eth.gas_price,
-            })
+            deployment_tx = contract.constructor().build_transaction(base_transaction)
+
+        # 🎯 GAS ESTIMATION WITH FALLBACK (come metaTransaction)
+        print(f"🔍 Transaction before gas estimation: {deployment_tx}")
+        try:
+            estimated_gas = w3.eth.estimate_gas(deployment_tx)
+            gas_limit = int(estimated_gas * 1.2)  # 20% margin
+            deployment_tx['gas'] = gas_limit
+            print(f"✅ Gas estimated: {estimated_gas}, using limit: {gas_limit}")
+        except Exception as gas_error:
+            default_gas = 3000000  # Fallback per deploy (più alto di 500k)
+            deployment_tx['gas'] = default_gas
+            print(f"⚠️ Gas estimation failed, using default: {gas_error}")
 
         # Sign transaction
-        signed_txn = w3.eth.account.sign_transaction(transaction, wallet_data["private_key"])
+        signed_txn = w3.eth.account.sign_transaction(deployment_tx, wallet_data["private_key"])
 
-        # Send transaction - handle different web3.py versions
+        # Calculate transaction size (utile per debugging)
         raw_transaction = getattr(signed_txn, 'rawTransaction', getattr(signed_txn, 'raw_transaction', signed_txn))
+        size_in_bytes = len(raw_transaction)
+        print(f"📏 Transaction size: {size_in_bytes} bytes")
+        
+        # Send transaction
         tx_hash = w3.eth.send_raw_transaction(raw_transaction)
         
         # Wait for transaction receipt
@@ -412,25 +500,48 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
         
         if receipt and receipt.status == 1:
             # Save deployment info
-            _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi)
+            _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi, contract_bytecode)
+            
+            # 🎯 CALCULATE DETAILED COSTS (miglioramento)
+            gas_used = receipt.gasUsed
+            gas_price = receipt.effectiveGasPrice
+            cost_wei = gas_used * gas_price
+            cost_eth = w3.from_wei(cost_wei, 'ether')
+            
+            print(f"✅ Contract deployed at: {receipt.contractAddress}")
+            print(f"💰 Gas used: {gas_used}, Total cost: {cost_eth} ETH")
             
             return {
                 "success": True,
                 "address": receipt.contractAddress,
                 "transaction_hash": tx_hash.hex(),
-                "gas_used": receipt.gasUsed
+                "gas_used": gas_used,
+                "gas_price_wei": gas_price,
+                "total_cost_eth": float(cost_eth),
+                "size_in_bytes": size_in_bytes,  # 🆕
+                "gas_limit": deployment_tx['gas']  # 🆕 per confronto
             }
         else:
             return {"success": False, "error": "Transaction failed or contract not deployed"}
 
     except Exception as e:
+        print(f"❌ Exception during deployment: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {"success": False, "error": f"Deployment error: {str(e)}"}
 
 
-def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi):
+def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi, bytecode=None):
     """Save deployment information to a JSON file."""
     deployments_dir = os.path.join(hardhat_base_path, "deployments")
     os.makedirs(deployments_dir, exist_ok=True)
+    
+    # Calculate bytecode size if bytecode is provided
+    size_in_bytes = 0
+    if bytecode:
+        # Remove '0x' prefix if present and calculate size
+        clean_bytecode = bytecode[2:] if bytecode.startswith('0x') else bytecode
+        size_in_bytes = len(clean_bytecode) // 2  # Each byte is 2 hex characters
     
     deployment_info = {
         "contract_name": contract_name,
@@ -438,10 +549,11 @@ def _save_deployment_info(contract_name, contract_address, tx_hash, network, abi
         "transaction_hash": tx_hash,
         "network": network,
         "deployed_at": time.time(),
+        "size_in_bytes": size_in_bytes,
         "abi": abi
     }
     
-    deployment_file = os.path.join(deployments_dir, f"{contract_name}_{network}.json")
+    deployment_file = os.path.join(deployments_dir, f"{contract_name}.json")
     with open(deployment_file, 'w', encoding='utf-8') as f:
         json.dump(deployment_info, f, indent=2)
 

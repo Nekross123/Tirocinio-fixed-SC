@@ -1,26 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
-
 import json
 import os
 from solders.keypair import Keypair
@@ -33,6 +10,7 @@ import platform
 anchor_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 solana_base_path = os.path.dirname(os.path.abspath(__file__))
+WALLETS_PATH = os.path.join(solana_base_path, "solana_wallets")
 
 
 def load_keypair_from_file(file_path):
@@ -54,11 +32,11 @@ def create_client(cluster):
     Supported clusters: Localnet, Devnet, Mainnet. Returns a ready AsyncClient.
     """
     rpc_url = None
-    if cluster == "Localnet":
+    if cluster == "Localnet" or cluster == "localnet":
         rpc_url = "http://localhost:8899"
-    elif cluster == "Devnet":
+    elif cluster == "Devnet" or cluster == "devnet":
         rpc_url = "https://api.devnet.solana.com"
-    elif cluster == "Mainnet":
+    elif cluster == "Mainnet" or cluster == "mainnet":
         rpc_url = "https://api.mainnet-beta.solana.com"
     client = AsyncClient(rpc_url)
     return client
@@ -92,6 +70,21 @@ def selection_menu(to_be_chosen, choices):
             return choices[int(choice) - 1]
         else:
             print("Please choose a valid choice.")
+
+async def get_wallet_balance(wallet_file , network):
+    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
+    if keypair is None:
+        return None
+    client = create_client(network)
+    resp = await client.get_balance(keypair.pubkey())
+    await client.close()
+    return resp.value / 1_000_000_000 
+
+def get_wallet_pubkey(wallet_file):
+    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
+    if keypair is None:
+        return None
+    return str(keypair.pubkey())
 
 def perform_program_closure(program_id, cluster, wallet_name):
     """Run 'solana program close' for a deployed program.
@@ -132,14 +125,14 @@ def run_command(operating_system, command):
 
 def _get_wallet_names():
     """List all .json keypair files under the local solana_wallets folder."""
-    wallets_path = f"{solana_base_path}/solana_wallets"
+   
     wallet_names = []
     # Check if the folder exists
-    if not os.path.isdir(wallets_path):
-        print(f"The path '{wallets_path}' does not exist.")
+    if not os.path.isdir(WALLETS_PATH):
+        print(f"The path '{WALLETS_PATH}' does not exist.")
     else:
         # Get all .json in the solana_wallets folder
-        wallet_names = [f for f in os.listdir(wallets_path) if f.endswith(".json")]
+        wallet_names = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
 
     return wallet_names
 

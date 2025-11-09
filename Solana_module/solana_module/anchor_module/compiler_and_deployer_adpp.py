@@ -1,26 +1,3 @@
-
-# MIT License
-#
-# Copyright (c) 2025  Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import os
 import re
 import json
@@ -295,12 +272,12 @@ def addInitIfNeeded(cargo_path, program_code):
                 }
         else:
             cargo_config['dependencies']['anchor-lang'] = {
-                'version': '0.31.1',
+                'version': '0.32.1', 
                 'features': ['init-if-needed']
             }
 
         if needs_anchor_spl and 'anchor-spl' not in cargo_config['dependencies']:
-            cargo_config['dependencies']['anchor-spl'] = '0.31.1'
+            cargo_config['dependencies']['anchor-spl'] = '0.32.1'
 
         # Additional detected deps
         detected = _detect_dependencies_from_code(program_code)
@@ -313,7 +290,6 @@ def addInitIfNeeded(cargo_path, program_code):
                             'thaw_account', 'set_authority', 'spl_token::', 'token::']
         if any(t in program_code for t in token_indicators) and 'spl-token' not in cargo_config['dependencies']:
             cargo_config['dependencies']['spl-token'] = '7.0'
-
         # Features section
         cargo_config.setdefault('features', {})
         if needs_anchor_spl:

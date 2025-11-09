@@ -1,0 +1,7 @@
+{
+  "network": "localhost",
+  "platform": "Ethereum",
+  "trace_title": "HTLC_results",
+  "error": "Global execution failed: Could not connect to network: localhost",
+  "results": []
+}

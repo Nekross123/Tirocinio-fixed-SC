@@ -1,25 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2025 Manuel Boi, Palumbo Lorenzo, Piras Mauro - Università degli Studi di Cagliari
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 import os
 import json
 from web3 import Web3
@@ -212,7 +190,11 @@ def build_function_call_data(contract_deployment_id, function_name, param_values
                 
         else:
             # Handle other parameter types
+            #add an int , bool , float , string handling
+
             param_value = param_values.get(param_name, '').strip()
+
+            
             
             if not param_value or param_value == '--':
                 raise ValueError(f"Parameter {param_name} not provided")
@@ -297,7 +279,7 @@ def interact_with_contract(contract_deployment_id, function_name, param_values, 
                 raise ValueError(f"View function call failed: {str(e)}")
         
         else:
-            # Send transaction using metaTransaction (Prof. Pinna's approach)
+            # Send transaction using metaTransaction 
             try:
                 # Convert value to wei
                 value_wei = w3.to_wei(float(value_eth), 'ether') if value_eth else 0
@@ -309,6 +291,7 @@ def interact_with_contract(contract_deployment_id, function_name, param_values, 
                     "success": True,
                     "transaction_hash": receipt['transactionHash'].hex(),
                     "gas_used": receipt.get('gasUsed', 'N/A'),
+                    "size_in_bytes": receipt.get('size_in_bytes', 0),
                     "status": "Success" if receipt.get('status') == 1 else "Failed",
                     "is_view": False
                 }

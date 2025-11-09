@@ -1,0 +1,26 @@
+{
+  "trace_title": "vesting",
+  "trace_actors": [
+    "owner",
+    "receiver"
+  ],
+  "configuration": {
+    "ethereum": {
+      "network": "localhost",
+      "use": "True"
+    }
+  },
+  "trace_execution": [
+    {
+      "sequence_id": "1",
+      "function_name": "release",
+      "waiting_time": 10,
+      "args": {},
+      "ethereum": {
+        "gas_limit": "300000",
+        "sender_wallet": "owner",
+        "send_transaction": true
+      }
+    }
+  ]
+}

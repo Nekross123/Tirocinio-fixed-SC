@@ -4,14 +4,16 @@ load_dotenv()
 import os
 import sys
 import asyncio
-
+import uuid
+import streamlit as st
+from datetime import datetime, timedelta
 sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Tezos_module"))
 
 # Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
 from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
-from solana_module.solana_utils import load_keypair_from_file, create_client
+from solana_module.solana_utils import load_keypair_from_file, create_client , get_wallet_balance, get_wallet_pubkey
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
 from solana_module.anchor_module.interactive_data_insertion_dapp import (
     fetch_programs,
@@ -28,7 +30,7 @@ from solana_module.anchor_module.interactive_data_insertion_dapp import (
 # Ethereum imports
 try:
     from ethereum_module.ethereum_utils import get_wallet_balance as get_eth_wallet_balance, get_wallet_address
-    from ethereum_module.hardhat_module.compiler_and_deployer import compile_and_deploy_contracts
+    from ethereum_module.hardhat_module.compiler_and_deployer import _deploy_contract, compile_contract
     from ethereum_module.hardhat_module.contract_utils import (
         fetch_deployed_contracts,
         load_abi_for_contract,
@@ -73,38 +75,26 @@ except ImportError as e:
 
 app = Flask(__name__)
 
-WALLETS_PATH = os.path.join("Solana_module", "solana_module", "solana_wallets")
+# ==============================
+# SOLANA ROUTES
+# ==============================
 
-
-async def get_wallet_balance(wallet_file):
-    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
-    if keypair is None:
-        return None
-    client = create_client("Devnet")
-    resp = await client.get_balance(keypair.pubkey())
-    await client.close()
-    return resp.value / 1_000_000_000  # lamport -> SOL
-
-def get_wallet_pubkey(wallet_file):
-    keypair = load_keypair_from_file(f"{WALLETS_PATH}/{wallet_file}")
-    if keypair is None:
-        return None
-    return str(keypair.pubkey())
 
 # ==============================
-# ROUTE Wallet Balance
+# ROUTE Wallet Balance Solana
 # ==============================
 @app.route("/wallet_balance", methods=["POST"])
 def wallet_balance():
     wallet_file = request.json.get("wallet_file")
+    network = request.json.get("network")
     if not wallet_file:
         return jsonify({"error": "No wallet selected"}), 400
 
-    balance = _run_async(get_wallet_balance(wallet_file))
+    balance = _run_async(get_wallet_balance(wallet_file , network))
     pubkey = get_wallet_pubkey(wallet_file)
     if balance is None:
         return jsonify({"error": "Error reading wallet"}), 500
-    return jsonify({"balance": balance, "pubkey": pubkey})
+    return jsonify({"balance": balance, "address": pubkey})
 
 # ==============================
 # ROUTE Compile & Deploy
@@ -294,7 +284,7 @@ def get_program_ctx():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==============================
-# ROUTE Placeholder Chiudi Programma
+# ROUTE Close Program
 # ==============================
 @app.route("/close_program", methods=["POST"])
 def close_program():
@@ -324,59 +314,124 @@ def close_program():
 
 ETH_WALLETS_PATH = os.path.join("ethereum_module", "ethereum_wallets")
 
+# ==============================
+# ROUTE Wallet Balance Ethereum
+# ==============================
 @app.route("/eth_wallet_balance", methods=["POST"])
 def eth_wallet_balance():
-    """Get Ethereum wallet balance and address."""
+    
     if not ETHEREUM_ENABLED:
         return jsonify({"error": "Ethereum modules not available"}), 500
         
-    wallet_file = request.json.get("wallet_file")
+    wallet_file = request.json.get("wallet_file")  # es. "localhost_weth3.json"
+    network = request.json.get("network")           # es. "localhost"    
     if not wallet_file:
         return jsonify({"error": "No wallet selected"}), 400
 
     try:
-        wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
-        print(f"DEBUG: Wallet path: {wallet_path}")
-        print(f"DEBUG: File exists: {os.path.exists(wallet_path)}")
         
-        balance = get_eth_wallet_balance(wallet_path, "sepolia")
-        print(f"DEBUG: Balance: {balance}")
+        wallet_path = os.path.join(ETH_WALLETS_PATH, wallet_file)
+        
+        
+        balance = get_eth_wallet_balance(wallet_path, network)
         
         address = get_wallet_address(wallet_path)
-        print(f"DEBUG: Address: {address}")
         
         if balance is None or address is None:
-            return jsonify({"error": f"Error reading wallet - Balance: {balance}, Address: {address}"}), 500
+            return jsonify({
+                "error": f"Error reading wallet - Balance: {balance}, Address: {address}"
+            }), 500
             
-        return jsonify({"balance": balance, "address": address})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/eth_compile_deploy", methods=["POST"])
-def eth_compile_deploy():
-    """Compile and deploy Ethereum contracts."""
-    if not ETHEREUM_ENABLED:
-        return jsonify({"error": "Ethereum modules not available"}), 500
+        return jsonify({
+            "balance": balance, 
+            "address": address,
+        })
         
-    wallet_file = request.json.get("wallet_file")
-    deploy_flag = request.json.get("deploy", True)
-    network = request.json.get("network", "sepolia")
-    single_contract = request.json.get("single_contract", None)
-    constructor_args = request.json.get("constructor_args", None)
-    
-    try:
-        result = compile_and_deploy_contracts(
-            wallet_name=wallet_file,
-            network=network,
-            deploy=deploy_flag,
-            single_contract=single_contract,
-            constructor_args=constructor_args
-        )
-        return jsonify(result)
     except Exception as e:
+        print(f"DEBUG: Exception occurred: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+# ==============================
+# ROUTE Compile Ethereum
+# ==============================
+deployment_sessions = {}
+
+@app.route('/eth_deployment_session', methods=['POST'])
+def handle_deployment_session():
+    data = request.json
+    action = data.get('action')
+    
+    if action == "create_session":
+        try:
+
+            print(f"DEBUG: Creating deployment session with data: {data}")
+            # Compila il contratto
+            compile_result = compile_contract(data['contract_file'])
+            if not compile_result:
+                return jsonify({"success": False, "error": "Compilation failed"})
+            
+            # Crea sessione
+            session_id = str(uuid.uuid4())
+            deployment_sessions[session_id] = {
+                'created_at': datetime.now(),
+                'contract_file': data['contract_file'],
+                'wallet_file': data['wallet_file'],
+                'network': data['network'],
+                'compiled_data': compile_result,
+                'abi': compile_result['abi']
+            }
+            
+            return jsonify({
+                "success": True,
+                "session_id": session_id,
+                "abi": compile_result['abi'],
+                "contract_name": data['contract_file'].replace('.sol', '')
+            })
+            
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Session creation failed: {str(e)}"})
+    
+    elif action == "deploy":
+        try:
+            session_id = data.get('session_id')
+            
+            session = deployment_sessions.get(session_id)
+            
+            if not session:
+                return jsonify({"success": False, "error": "Invalid or expired session"})
+            
+            # Verifica scadenza sessione
+            if datetime.now() - session['created_at'] > timedelta(hours=1):
+                del deployment_sessions[session_id]
+                return jsonify({"success": False, "error": "Session expired"})
+            
+            
+            deploy_result = _deploy_contract(
+                contract_name=session['contract_file'].replace('.sol', ''),
+                compiled_data=session['compiled_data'],
+                wallet_name=session['wallet_file'],
+                network=session['network'],
+                constructor_args=data.get('constructor_args', {}),
+                value_in_ether=data.get('value_in_ether', 0)
+            )
+            
+            # Cleanup dopo deploy
+            if session_id in deployment_sessions:
+                del deployment_sessions[session_id]
+            
+            return jsonify(deploy_result)
+            
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Deployment failed: {str(e)}"})
+    
+    else:
+        return jsonify({"success": False, "error": "Invalid action"})
+
 
 @app.route("/eth_get_contracts", methods=["GET"])
 def eth_get_contracts():

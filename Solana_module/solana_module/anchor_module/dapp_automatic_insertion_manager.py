@@ -25,13 +25,13 @@ async def run_execution_trace(file_name):
     results to display and allow download.
     """
     
-    # Create placeholder for status message
+    
     status_placeholder = st.empty()
     
-    # Show initial message
+    
     status_placeholder.info(f"⏳ Executing automatic trace: **{file_name}**...")
     
-    # Check initialized programs
+    
     initialized_programs = fetch_initialized_programs()
     if len(initialized_programs) == 0:
         status_placeholder.error("❌ No program has been initialized yet. Please compile an Anchor program first.")
@@ -353,6 +353,14 @@ def _write_json(file_name, results , network):
 
 def build_table(data):
     """Render a vertical, readable summary table in Streamlit with downloads."""
+    if data is None:
+        st.error("No data received from backend")
+        return
+    
+    if "results_file" not in data:
+        st.error(f"Invalid data format: {data}")
+        return
+        
     results = data["results_file"]
     actions = results["actions"]
     

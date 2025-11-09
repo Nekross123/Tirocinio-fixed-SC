@@ -1,0 +1,62 @@
+{
+  "contract_name": "storage",
+  "address": "0x47AFf4EbA9820a24E5A383B1bE3f226bEFAe148A",
+  "transaction_hash": "0x37695ef8c15aace16741a6d4c713f83c18d98115822d400211cfc7b283e43bce",
+  "network": "localhost",
+  "deployed_at": 1762422228.6137016,
+  "size_in_bytes": 1864,
+  "abi": [
+    {
+      "inputs": [],
+      "name": "byteSequence",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "_byteSequence",
+          "type": "bytes"
+        }
+      ],
+      "name": "storeBytes",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_textString",
+          "type": "string"
+        }
+      ],
+      "name": "storeString",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "textString",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
