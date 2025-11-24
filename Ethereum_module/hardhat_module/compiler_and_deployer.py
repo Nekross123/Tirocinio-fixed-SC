@@ -8,7 +8,7 @@ import streamlit as st
 from web3 import Web3
 from eth_account import Account
 from solcx import compile_source, install_solc, set_solc_version
-from ethereum_module.ethereum_utils import (
+from Ethereum_module.ethereum_utils import (
     run_command, 
     create_web3_instance, 
     load_wallet_from_file, 
@@ -16,8 +16,8 @@ from ethereum_module.ethereum_utils import (
     choose_network,
     wait_for_transaction_receipt
 )
-from ethereum_module.streamlit_constructor_interface import automatic_constructor_collector ,  _get_constructor_parameters_from_abi
-hardhat_base_path = os.path.join("ethereum_module", "hardhat_module")
+from Ethereum_module.streamlit_constructor_interface import automatic_constructor_collector ,  _get_constructor_parameters_from_abi
+hardhat_base_path = os.path.join("Ethereum_module", "hardhat_module")
 contracts_path = os.path.join(hardhat_base_path, "contracts")
 
 
@@ -421,7 +421,7 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
     
     try:
         # Load wallet
-        wallet_path = os.path.join("ethereum_module", "ethereum_wallets", wallet_name)
+        wallet_path = os.path.join("Ethereum_module", "ethereum_wallets", wallet_name)
         wallet_data = load_wallet_from_file(wallet_path)
         if not wallet_data:
             return {"success": False, "error": "Could not load wallet"}
@@ -454,7 +454,7 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
             
             print(f"✅ Using provided constructor arguments: {constructor_args}")
 
-        # 🎯 BUILD TRANSACTION WITH ESTIMATION (come metaTransaction)
+        #  BUILD TRANSACTION WITH ESTIMATION (come metaTransaction)
         base_transaction = {
             'chainId': w3.eth.chain_id,
             'from': account.address,
@@ -478,11 +478,11 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
             estimated_gas = w3.eth.estimate_gas(deployment_tx)
             gas_limit = int(estimated_gas * 1.2)  # 20% margin
             deployment_tx['gas'] = gas_limit
-            print(f"✅ Gas estimated: {estimated_gas}, using limit: {gas_limit}")
+            print(f" Gas estimated: {estimated_gas}, using limit: {gas_limit}")
         except Exception as gas_error:
             default_gas = 3000000  # Fallback per deploy (più alto di 500k)
             deployment_tx['gas'] = default_gas
-            print(f"⚠️ Gas estimation failed, using default: {gas_error}")
+            print(f" Gas estimation failed, using default: {gas_error}")
 
         # Sign transaction
         signed_txn = w3.eth.account.sign_transaction(deployment_tx, wallet_data["private_key"])
@@ -497,19 +497,19 @@ def _deploy_contract(contract_name, compiled_data, wallet_name, network, constru
         
         # Wait for transaction receipt
         receipt = wait_for_transaction_receipt(tx_hash.hex(), network)
+
+        print(f"\n\n\n\n\n{receipt}\n\n\n\n\n")
         
         if receipt and receipt.status == 1:
             # Save deployment info
             _save_deployment_info(contract_name, receipt.contractAddress, tx_hash.hex(), network, contract_abi, contract_bytecode)
             
-            # 🎯 CALCULATE DETAILED COSTS (miglioramento)
+            # 
             gas_used = receipt.gasUsed
-            gas_price = receipt.effectiveGasPrice
+            gas_price = receipt.get('effectiveGasPrice') or receipt.get('gasPrice', 0)
+            
             cost_wei = gas_used * gas_price
             cost_eth = w3.from_wei(cost_wei, 'ether')
-            
-            print(f"✅ Contract deployed at: {receipt.contractAddress}")
-            print(f"💰 Gas used: {gas_used}, Total cost: {cost_eth} ETH")
             
             return {
                 "success": True,

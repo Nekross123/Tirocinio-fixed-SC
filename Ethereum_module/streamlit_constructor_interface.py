@@ -4,11 +4,11 @@ import streamlit as st
 import os
 from typing import List, Dict, Any, Optional
 
-from ethereum_module.ethereum_utils import get_wallet_address ,load_wallet_from_file
-from ethereum_module.interactive_interface import get_available_wallets
+from Ethereum_module.ethereum_utils import get_wallet_address ,load_wallet_from_file
+from Ethereum_module.interactive_interface import get_available_wallets
 
 
-wallets_path = os.path.join("ethereum_module", "ethereum_wallets")
+wallets_path = os.path.join("Ethereum_module", "ethereum_wallets")
 
 
 

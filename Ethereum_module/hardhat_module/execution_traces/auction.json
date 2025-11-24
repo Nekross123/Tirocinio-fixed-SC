@@ -6,13 +6,22 @@
   "configuration": {
     "ethereum": {
       "network": "localhost",
-      "use": "True"
+      "use": "True",
+      "deploy_config" : { 
+                        "settings" : {
+                          "sender_wallet" : "seller"                                                                                                                             
+                        },
+                        "_object" : "monitor" ,
+                        "_startingBid" : "1"
+                        
+        }
     }
   },
   "trace_execution": [
     {
       "sequence_id": "1",
       "function_name": "start",
+      "waiting_time": 0,
       "args": {"_duration": "15"},
       "ethereum": {
         "sender_wallet": "seller",
@@ -22,6 +31,7 @@
      {
       "sequence_id": "2",
       "function_name": "bid",
+      "waiting_time": 0,
       "args": {},
       "ethereum": {
         "eth_value": "2",
@@ -33,6 +43,7 @@
     {
       "sequence_id": "3",
       "function_name": "withdraw",
+      "waiting_time": 0,
       "args": {},
       "ethereum": {
         
@@ -44,6 +55,7 @@
     {
       "sequence_id": "4",
       "function_name": "end",
+      "waiting_time": 30,
       "args": {},
       "ethereum": {
         

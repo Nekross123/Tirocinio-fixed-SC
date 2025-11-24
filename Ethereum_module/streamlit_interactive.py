@@ -3,7 +3,7 @@
 
 import streamlit as st
 from typing import Dict, Any, List, Optional
-from ethereum_module.interactive_interface import (
+from Ethereum_module.interactive_interface import (
     get_available_contracts,
     get_available_wallets, 
     get_contract_info,
@@ -11,7 +11,7 @@ from ethereum_module.interactive_interface import (
     execute_function_call,
     create_interactive_session
 )
-from ethereum_module.hardhat_module.contract_utils import fetch_functions_for_contract
+from Ethereum_module.hardhat_module.contract_utils import fetch_functions_for_contract
 
 
 # ========================================

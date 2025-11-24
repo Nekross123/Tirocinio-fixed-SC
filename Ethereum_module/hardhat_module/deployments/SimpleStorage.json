@@ -1,9 +1,9 @@
 {
   "contract_name": "SimpleStorage",
-  "address": "0x3b99F35951587f769E8914798e8a095dbD3Cb467",
-  "transaction_hash": "0x6b15271a8f320e5d1faec78dd25506a8ed0eb08667eb0d2fba233e7d5701afb3",
+  "address": "0x6183b2D3A0e63bC8e44649a1338cc4A327448C02",
+  "transaction_hash": "0x4c187f05aa779f234ff8b09bc09b0857a4564d88a48b74b38072d123b58a544d",
   "network": "sepolia",
-  "deployed_at": 1762421616.75584,
+  "deployed_at": 1763196829.2635093,
   "size_in_bytes": 3403,
   "abi": [
     {

@@ -19,7 +19,7 @@ from Solana_module.solana_module.anchor_module.anchor_utils import anchor_base_p
 def upload_trace_file():
     """UI component for uploading execution trace files via drag & drop."""
     
-    st.subheader("📤 Upload Execution Trace")
+    st.subheader(" Upload Execution Trace")
     
     uploaded_file = st.file_uploader(
         "Drag and drop your execution trace JSON file here",
@@ -38,7 +38,7 @@ def upload_trace_file():
             missing_fields = [field for field in required_fields if field not in json_data]
             
             if missing_fields:
-                st.error(f"❌ Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
+                st.error(f" Invalid trace file. Missing required fields: {', '.join(missing_fields)}")
                 return
             config_list = []
 
@@ -69,8 +69,8 @@ def upload_trace_file():
             if "evm" in config_list :
                 print("add evm path")
                
-            st.info(f"📁 Saved to: `execution_traces/{uploaded_file.name}`")
-            st.success(f"✅ Trace file `{uploaded_file.name}` uploaded successfully , you can find and choose the list of toolchains below:")
+            st.info(f" Saved to: `execution_traces/{uploaded_file.name}`")
+            st.success(f" Trace file `{uploaded_file.name}` uploaded successfully , you can find and choose the list of toolchains below:")
             showLinks(config_list)
             
                 

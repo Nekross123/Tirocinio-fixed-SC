@@ -29,9 +29,9 @@ from solana_module.anchor_module.interactive_data_insertion_dapp import (
 
 # Ethereum imports
 try:
-    from ethereum_module.ethereum_utils import get_wallet_balance as get_eth_wallet_balance, get_wallet_address
-    from ethereum_module.hardhat_module.compiler_and_deployer import _deploy_contract, compile_contract
-    from ethereum_module.hardhat_module.contract_utils import (
+    from Ethereum_module.ethereum_utils import get_wallet_balance as get_eth_wallet_balance, get_wallet_address
+    from Ethereum_module.hardhat_module.compiler_and_deployer import _deploy_contract, compile_contract
+    from Ethereum_module.hardhat_module.contract_utils import (
         fetch_deployed_contracts,
         load_abi_for_contract,
         fetch_functions_for_contract,
@@ -297,7 +297,7 @@ def close_program():
 # ETHEREUM ROUTES
 # ==============================
 
-ETH_WALLETS_PATH = os.path.join("ethereum_module", "ethereum_wallets")
+ETH_WALLETS_PATH = os.path.join("Ethereum_module", "ethereum_wallets")
 
 # ==============================
 # ROUTE Wallet Balance Ethereum

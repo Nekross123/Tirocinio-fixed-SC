@@ -2,15 +2,15 @@ import os
 import json
 from web3 import Web3
 from eth_account import Account
-from ethereum_module.ethereum_utils import (
+from Ethereum_module.ethereum_utils import (
     create_web3_instance,
     load_wallet_from_file,
     wait_for_transaction_receipt,
     get_default_network
 )
-from ethereum_module.hardhat_module.meta_transaction import metaTransaction
+from Ethereum_module.hardhat_module.meta_transaction import metaTransaction
 
-hardhat_base_path = os.path.join("ethereum_module", "hardhat_module")
+hardhat_base_path = os.path.join("Ethereum_module", "hardhat_module")
 
 
 def fetch_deployed_contracts():

@@ -14,7 +14,7 @@
     {
       "sequence_id": "1",
       "function_name": "join",
-      "waiting_time": 0,
+      "waiting_time": 10,
       "actors": [
         "participant1",
         "participant2",

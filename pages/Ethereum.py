@@ -12,9 +12,9 @@ sys.path.append(root_path)
 # Import Ethereum modules
 # ==============================
 try:
-    from ethereum_module.hardhat_module.compiler_and_deployer import compile_contract,deploy_contracts
-    import ethereum_module.ethereum_utils as eth_utils
-    from ethereum_module.hardhat_module.contract_utils import (
+    from Ethereum_module.hardhat_module.compiler_and_deployer import compile_contract,deploy_contracts
+    import Ethereum_module.ethereum_utils as eth_utils
+    from Ethereum_module.hardhat_module.contract_utils import (
         fetch_deployed_contracts,
         load_abi_for_contract,
         fetch_functions_for_contract,
@@ -22,8 +22,8 @@ try:
         format_function_info,
         interact_with_contract
     )
-    from ethereum_module.streamlit_interactive import run_interactive_contract_interface
-    from ethereum_module.streamlit_constructor_interface import (
+    from Ethereum_module.streamlit_interactive import run_interactive_contract_interface
+    from Ethereum_module.streamlit_constructor_interface import (
         collect_constructor_args_streamlit,
         display_constructor_preview,
         validate_constructor_args,
@@ -88,9 +88,9 @@ selected_action = st.sidebar.radio(
     ("Manage Wallets", "Upload new contract", "Compile & Deploy", "Interactive data insertion", "Execution Traces")
 )
 
-WALLETS_PATH = os.path.join(root_path, "ethereum_module", "ethereum_wallets")
-CONTRACTS_PATH = os.path.join(root_path, "ethereum_module", "hardhat_module", "contracts")
-DEPLOYMENTS_PATH = os.path.join(root_path, "ethereum_module", "hardhat_module", "deployments")
+WALLETS_PATH = os.path.join(root_path, "Ethereum_module", "ethereum_wallets")
+CONTRACTS_PATH = os.path.join(root_path, "Ethereum_module", "hardhat_module", "contracts")
+DEPLOYMENTS_PATH = os.path.join(root_path, "Ethereum_module", "hardhat_module", "deployments")
 
 # ==============================
 # Main section
@@ -106,7 +106,7 @@ if selected_action == "Manage Wallets":
     
         selected_network = st.selectbox(
                 "Select a network", 
-                ["--", "localhost", "devnet", "mainnet"]
+                ["--", "localhost", "sepolia", "mainnet"]
             )
         
         if selected_wallet_file != "--" and st.button("Show balance and address"):
@@ -301,7 +301,7 @@ elif selected_action == "Interactive data insertion":
     st.caption("Interactive guided interface for smart contract functions.")
     
     try:
-        from ethereum_module.streamlit_interactive import (
+        from Ethereum_module.streamlit_interactive import (
             display_contract_selection,
             display_function_selection,
             get_available_contracts,
@@ -334,7 +334,7 @@ elif selected_action == "Interactive data insertion":
             
             if contract_id != "--":
                 # Show contract info
-                from ethereum_module.interactive_interface import get_contract_info
+                from Ethereum_module.interactive_interface import get_contract_info
                 contract_info = get_contract_info(contract_id)
                 
                 with st.expander("Contract Information"):
@@ -370,7 +370,7 @@ elif selected_action == "Interactive data insertion":
                     
                     if function_name != "--":
                         # Show function guidance
-                        from ethereum_module.interactive_interface import get_function_guidance
+                        from Ethereum_module.interactive_interface import get_function_guidance
                         guidance = get_function_guidance(contract_id, function_name)
                         
                         st.markdown("---")
@@ -399,7 +399,7 @@ elif selected_action == "Interactive data insertion":
                                         addr_data = {"name": param['name'], "method": method}
                                         
                                         if method == "Wallet Address":
-                                            wallet_files = [f for f in os.listdir("ethereum_module/ethereum_wallets") if f.endswith('.json')]
+                                            wallet_files = [f for f in os.listdir("Ethereum_module/ethereum_wallets") if f.endswith('.json')]
                                             addr_data['wallet'] = st.selectbox(
                                                 f"Wallet for {param['name']}",
                                                 ["--"] + wallet_files,
@@ -463,7 +463,7 @@ elif selected_action == "Interactive data insertion":
                             
                             col1, col2 = st.columns(2)
                             with col1:
-                                wallet_files = [f for f in os.listdir("ethereum_module/ethereum_wallets") if f.endswith('.json')]
+                                wallet_files = [f for f in os.listdir("Ethereum_module/ethereum_wallets") if f.endswith('.json')]
                                 caller_wallet = st.selectbox(
                                     "Sender Wallet",
                                     ["--"] + wallet_files,
@@ -531,7 +531,7 @@ elif selected_action == "Execution Traces":
     st.caption("Select and execute Ethereum contract execution traces")
     
     try:
-        from ethereum_module.hardhat_module.automatic_execution_manager import (
+        from Ethereum_module.hardhat_module.automatic_execution_manager import (
             get_execution_traces,
             exec_contract_automatically
         )
@@ -540,8 +540,8 @@ elif selected_action == "Execution Traces":
         traces = get_execution_traces()
         
         if not traces:
-            st.warning("⚠️ No execution traces found in the execution_traces folder")
-            st.info("💡 Create execution trace files in `ethereum_module/hardhat_module/execution_traces/`")
+            st.warning(" No execution traces found in the execution_traces folder")
+            st.info(" Create execution trace files in `Ethereum_module/hardhat_module/execution_traces/`")
         else:
             # Trace selection
             st.markdown("####  Select Execution Trace")

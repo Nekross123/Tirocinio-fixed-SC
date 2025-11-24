@@ -171,7 +171,7 @@ elif selected_action == "Compile & Deploy":
     wallet_files = [f for f in os.listdir(WALLETS_PATH) if f.endswith(".json")]
     selected_wallet_file = st.selectbox("Select wallet for deployment", ["--"] + wallet_files)
 
-    selected_cluster = st.selectbox("Select a cluster", ["--"] + ["Devnet", "Testnet", "Mainnet"])
+    selected_cluster = st.selectbox("Select a cluster", ["--"] + ["Devnet", "Localnet", "Mainnet"])
 
     st.markdown("----")
     # Choose compilation mode
@@ -189,11 +189,11 @@ elif selected_action == "Compile & Deploy":
         # Show list of all programs that will be compiled
         program_files = [f for f in os.listdir(ANCHOR_PROGRAMS_PATH) if f.endswith(".rs")]
         if program_files:
-            st.info("📋 Programs that will be compiled and deployed:")
+            st.info("Programs that will be compiled and deployed:")
             for i, prog in enumerate(program_files, 1):
                 st.write(f"{i}. `{prog}`")
         else:
-            st.warning("❌ No .rs programs found in the anchor_programs folder")
+            st.warning(" No .rs programs found in the anchor_programs folder")
 
     st.markdown("----")
     deploy_flag = st.checkbox("Also deploy after compilation", value=True)

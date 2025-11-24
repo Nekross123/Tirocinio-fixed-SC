@@ -29,33 +29,36 @@ async def run_execution_trace(file_name):
     status_placeholder = st.empty()
     
     
-    status_placeholder.info(f"⏳ Executing automatic trace: **{file_name}**...")
+    status_placeholder.info(f" Executing automatic trace: **{file_name}**...")
     
     
     initialized_programs = fetch_initialized_programs()
     if len(initialized_programs) == 0:
-        status_placeholder.error("❌ No program has been initialized yet. Please compile an Anchor program first.")
-        return
+        status_placeholder.error(" No program has been initialized yet. Please compile an Anchor program first.")
+        return {"success": False, "error": "No program initialized"}
 
     if file_name is None:
-        status_placeholder.error("❌ No trace file selected")
-        return
+        status_placeholder.error(" No trace file selected")
+        return {"success": False, "error": "No trace file selected"}
 
     results = []
 
     json_file = _read_json(f"{anchor_base_path}/execution_traces/{file_name}")
     if json_file is None:
-        status_placeholder.error(f"❌ Failed to read trace file: {file_name}")
-        return
+        status_placeholder.error(f"Failed to read trace file: {file_name}")
+        return {"success": False, "error": "Failed to read trace file"}
         
     actors = bind_actors(file_name)
     if not actors:
-        status_placeholder.error("❌ Failed to bind actors to wallets")
-        return
+        status_placeholder.error("Failed to bind actors to wallets")
+        return {"success": False, "error": "Failed to bind actors"}
 
     client = AsyncClient("https://api.devnet.solana.com")
     network = get_network_from_client(client)
     program_name = json_file["trace_title"]
+    
+    # Track accounts created during trace execution
+    created_accounts = set()
 
     try:
         for trace in json_file["trace_execution"]:
@@ -132,7 +135,8 @@ async def run_execution_trace(file_name):
                         final_accounts[account] = pda_key
                     except Exception as e:
                         print(f"Invalid PDA key format for account {account}: {extracted_key}. Error: {e}")
-                        return
+                        st.error(f"Invalid PDA key format for account {account}")
+                        continue
 
 
                 elif not is_wallet(complete_dict[account]):
@@ -144,7 +148,8 @@ async def run_execution_trace(file_name):
                     keypair = load_keypair_from_file(file_path)
                     if keypair is None:
                         print(f"Wallet for account {account} not found at path {file_path}.")
-                        return
+                        st.error(f"Wallet not found: {file_path}")
+                        continue
                     if account in signer_accounts:
                         signer_accounts_keypairs[account] = keypair
                     final_accounts[account] = keypair.pubkey()
@@ -162,7 +167,8 @@ async def run_execution_trace(file_name):
                     keypair = load_keypair_from_file(file_path)
                     if keypair is None:
                         print(f"Wallet for account {account} not found at path {file_path}.")
-                        return
+                        st.error(f"Wallet not found: {file_path}")
+                        continue
                     if account in signer_accounts:
                         signer_accounts_keypairs[account] = keypair
                     final_accounts[account] = keypair.pubkey()
@@ -187,7 +193,8 @@ async def run_execution_trace(file_name):
 
                     if len(array_values) != array_length:
                         print(f"Error: Expected array of length {array_length}, but got {len(array_values)}")
-                        return
+                        st.error(f"Invalid array length for {arg['name']}")
+                        continue
 
                     valid_values = []
                     for j in range(len(array_values)):
@@ -196,14 +203,16 @@ async def run_execution_trace(file_name):
                             valid_values.append(converted_value)
                         else:
                             print(f"Invalid input at index {j} in the array. Please try again.")
-                            return
+                            st.error(f"Invalid array value at index {j}")
+                            continue
 
                     final_args[arg['name']] = valid_values
                 elif vec_type is not None:
                     vec_values = complete_dict[arg].split()
                     if len(vec_values) == 0:
                         print("vec cannot have zero elements")
-                        return
+                        st.error("Vector cannot have zero elements")
+                        continue
                     
                     valid_values = []
                     for j in range(len(vec_values)):
@@ -212,7 +221,8 @@ async def run_execution_trace(file_name):
                             valid_values.append(converted_value)
                         else:
                             print(f"Invalid input at index {j} in the vector. Please try again.")
-                            return
+                            st.error(f"Invalid vector value at index {j}")
+                            continue
 
                     final_args[arg['name']] = valid_values
 
@@ -221,7 +231,8 @@ async def run_execution_trace(file_name):
                     type = check_type(arg["type"])
                     if type is None:
                         print(f"Unsupported type for arg {arg['name']}")
-                        return
+                        st.error(f"Unsupported type for {arg['name']}")
+                        continue
 
                     if type == "bytes":      
                             aux = complete_dict[arg['name']].encode('utf-8')
@@ -242,9 +253,12 @@ async def run_execution_trace(file_name):
                 keypair = load_keypair_from_file(provider_keypair_path)
                 if keypair is None:
                     print("Provider wallet not found. Transaction cannot be sent.")
+                    st.error("Provider wallet not found")
+                    continue
             except KeyError :
                 print("Provider wallet not found.Insert the field 'provider_wallet' in the json trace")
-                return
+                st.error("Provider wallet field missing in trace")
+                continue
                 
             cluster, is_deployed = fetch_cluster(program_name)
             client_for_transaction = create_client(cluster)
@@ -263,18 +277,139 @@ async def run_execution_trace(file_name):
             size = measure_transaction_size(transaction)
             fees = await compute_transaction_fees(client_for_transaction, transaction)
 
+            # Calculate rent cost only for accounts that will be created by this transaction
+            total_rent_lamports = 0
+            accounts_to_create = []
+            
+            # Store account sizes BEFORE transaction for realloc detection
+            account_sizes_before = {}
+            
+            # Check which PDA accounts don't exist yet (will be created)
+            for account_name, account_pubkey in final_accounts.items():
+                # Only check PDA accounts (not wallets/signers)
+                if not is_wallet(account_name):
+                    account_pubkey_str = str(account_pubkey)
+                    # Check if already tracked as created in this trace (no rent duplicato)
+                    if account_pubkey_str in created_accounts:
+                        print(f"Account '{account_name}' already tracked as created in this trace - no rent needed")
+                        continue
+                    try:
+                        account_info_response = await client.get_account_info(account_pubkey)
+                        
+                        # Store size before transaction (for realloc detection)
+                        if account_info_response.value is not None:
+                            account_sizes_before[account_pubkey_str] = len(account_info_response.value.data)
+                        else:
+                            account_sizes_before[account_pubkey_str] = 0
+                        
+                        if account_info_response.value is None:
+                            expected_size = _get_account_size_from_idl(idl, instruction, account_name)
+                            if expected_size > 0:
+                                rent_response = await client.get_minimum_balance_for_rent_exemption(expected_size)
+                                rent_lamports = rent_response.value
+                                total_rent_lamports += rent_lamports
+                                accounts_to_create.append({
+                                    "account_name": account_name,
+                                    "account_pubkey": str(account_pubkey),
+                                    "expected_size_bytes": expected_size,
+                                    "rent_lamports": rent_lamports
+                                })
+                                created_accounts.add(account_pubkey_str)
+                                print(f"Account '{account_name}' will be created - rent: {rent_lamports} lamports ({rent_lamports / 1_000_000_000:.6f} SOL)")
+                            else:
+                                print(f"Could not determine size for account '{account_name}', skipping rent calculation")
+                        else:
+                            print(f"Account '{account_name}' already exists on chain - no rent needed")
+                    except Exception as e:
+                        print(f"Error checking account {account_name}: {e}")
+
+            # Initialize resize tracking variables
+            rent_from_resize = 0
+            accounts_resized = []
+            
             if str(complete_dict["send_transaction"]).lower() == 'true':
                 if is_deployed:
                     transaction_hash = await send_transaction(provider, transaction)
                     
+                    # Wait for transaction confirmation before proceeding
+                    # This ensures account state is updated for next transaction
+                    try:
+                        confirmation = await client.confirm_transaction(
+                            transaction_hash,
+                            commitment="confirmed"
+                        )
+                        if confirmation.value[0].err:
+                            print(f"Transaction failed: {confirmation.value[0].err}")
+                        else:
+                            print(f"Transaction confirmed in slot {confirmation.context.slot}")
+                            
+                            # Small delay to ensure RPC state is fully updated
+                            await asyncio.sleep(0.5)
+                            
+                            # Check for account resize (realloc) after transaction
+                            rent_from_resize = 0
+                            accounts_resized = []
+                            
+                            for account_name, account_pubkey in final_accounts.items():
+                                if not is_wallet(account_name):
+                                    account_pubkey_str = str(account_pubkey)
+                                    try:
+                                        account_info_after = await client.get_account_info(account_pubkey)
+                                        if account_info_after.value is not None:
+                                            size_after = len(account_info_after.value.data)
+                                            size_before = account_sizes_before.get(account_pubkey_str, 0)
+                                            
+                                            if size_after > size_before:
+                                                # Account was resized - calculate additional rent
+                                                size_increase = size_after - size_before
+                                                rent_increase_response = await client.get_minimum_balance_for_rent_exemption(size_after)
+                                                rent_before_response = await client.get_minimum_balance_for_rent_exemption(size_before) if size_before > 0 else type('obj', (object,), {'value': 0})()
+                                                
+                                                additional_rent = rent_increase_response.value - (rent_before_response.value if hasattr(rent_before_response, 'value') else 0)
+                                                rent_from_resize += additional_rent
+                                                
+                                                accounts_resized.append({
+                                                    "account_name": account_name,
+                                                    "account_pubkey": account_pubkey_str,
+                                                    "size_before": size_before,
+                                                    "size_after": size_after,
+                                                    "size_increase": size_increase,
+                                                    "additional_rent_lamports": additional_rent
+                                                })
+                                                
+                                                print(f"Account '{account_name}' was resized: {size_before} → {size_after} bytes (+{size_increase})")
+                                                print(f"   Additional rent: {additional_rent} lamports ({additional_rent / 1_000_000_000:.9f} SOL)")
+                                    except Exception as e:
+                                        print(f"Error checking resize for {account_name}: {e}")
+                            
+                            total_rent_lamports += rent_from_resize
+                            
+                    except Exception as e:
+                        print(f"Warning: Could not confirm transaction: {e}")
+                    
                 else:
                     transaction_hash = "program is not deployed"
+            else:
+                transaction_hash = "transaction not sent (send_transaction=false)"
 
+            total_cost_lamports = fees + total_rent_lamports
+            
+            # Determine rent breakdown
+            rent_from_creation = sum(acc["rent_lamports"] for acc in accounts_to_create)
+            
             json_action = { "execution_time_in_slots": elapsed_slots,
                             "sequence_id" : trace_id ,
                             "function_name": instruction ,
                             "transaction_size_bytes": size,
                             "transaction_fees_lamports": fees,
+                            "rent_from_account_creation_lamports": rent_from_creation,
+                            "rent_from_resize_lamports": rent_from_resize,
+                            "total_rent_cost_lamports": total_rent_lamports,
+                            "total_cost_lamports": total_cost_lamports,
+                            "accounts_created": len(accounts_to_create),
+                            "accounts_created_details": accounts_to_create,
+                            "accounts_resized": len(accounts_resized),
+                            "accounts_resized_details": accounts_resized,
                             "transaction_hash": f"{transaction_hash}"
                             
                         }
@@ -288,7 +423,7 @@ async def run_execution_trace(file_name):
     file_path,final = _write_json(file_name_without_extension, results, network)
     
     # Replace initial message with completion message
-    status_placeholder.success(f"✅ Execution completed successfully! Results saved to: `{os.path.basename(file_path)}`")
+    status_placeholder.success(f"Execution completed successfully! Results saved to: `{os.path.basename(file_path)}`")
     return {"success": True, "results_file": final}
 
 
@@ -306,6 +441,68 @@ def _find_execution_traces():
     return [f for f in os.listdir(path) if f.lower().endswith('.json')]
 
 
+
+
+def _get_account_size_from_idl(idl, instruction_name, account_name):
+    """
+    Try to determine the expected size of an account from the IDL.
+    
+    Args:
+        idl: The loaded IDL dictionary
+        instruction_name: Name of the instruction being executed
+        account_name: Name of the account to check
+        
+    Returns:
+        int: Expected size in bytes, or 0 if cannot be determined
+    """
+    try:
+        # Look for account types in IDL
+        if "accounts" in idl:
+            for account_type in idl["accounts"]:
+                # Check if account name matches (case-insensitive or partial match)
+                if account_type["name"].lower() in account_name.lower() or account_name.lower() in account_type["name"].lower():
+                    # Calculate size from account fields
+                    total_size = 8  # Anchor discriminator (8 bytes)
+                    
+                    if "type" in account_type and "fields" in account_type["type"]:
+                        for field in account_type["type"]["fields"]:
+                            field_type = field.get("type", "")
+                            
+                            # Basic type sizes
+                            if field_type == "u8" or field_type == "i8" or field_type == "bool":
+                                total_size += 1
+                            elif field_type == "u16" or field_type == "i16":
+                                total_size += 2
+                            elif field_type == "u32" or field_type == "i32":
+                                total_size += 4
+                            elif field_type == "u64" or field_type == "i64":
+                                total_size += 8
+                            elif field_type == "u128" or field_type == "i128":
+                                total_size += 16
+                            elif field_type == "publicKey":
+                                total_size += 32
+                            elif field_type == "string":
+                                # String with default max length
+                                total_size += 4 + 100  # 4 bytes length + max 100 chars
+                            elif isinstance(field_type, dict):
+                                # Handle complex types (vec, array, etc.)
+                                if "vec" in field_type:
+                                    total_size += 4 + 32  # Vec length + some default space
+                                elif "array" in field_type:
+                                    total_size += 32  # Default array size
+                            else:
+                                # Unknown type, add some default space
+                                total_size += 8
+                    
+                    return total_size
+        
+        # If no match found in accounts section, use a conservative default
+        # Most PDAs are at least 128 bytes (discriminator + some data)
+        return 128
+        
+    except Exception as e:
+        print(f"Error determining account size from IDL: {e}")
+        return 128  # Fallback default size
 
 
 def _read_json(file_path):
@@ -415,7 +612,7 @@ def build_table(data):
     """, unsafe_allow_html=True)
     
     # --- Info generali (su una riga) ---
-    st.markdown("### 📋 Generic Info")
+    st.markdown("### Generic Info")
     cols = st.columns(3)
 
     with cols[0]:
@@ -431,7 +628,7 @@ def build_table(data):
         st.markdown(f"<div class='info-value'>{results['trace_title']}</div>", unsafe_allow_html=True)
     
     # --- Azioni in formato verticale ---
-    st.markdown("### ⚙️ Actions")
+    st.markdown("### Actions")
 
     for action in actions:
    
@@ -449,7 +646,7 @@ def build_table(data):
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- Pulsanti di Download ---
-    st.markdown("### 💾 Download Results")
+    st.markdown("### Download Results")
     
     # Prepara i dati per il download
     download_data = {
@@ -481,7 +678,7 @@ def build_table(data):
     
     with col1:
         st.download_button(
-            label="📥 Download as JSON",
+            label="Download as JSON",
             data=json_data,
             file_name=f"{results['trace_title']}_results.json",
             mime="application/json"
@@ -489,7 +686,7 @@ def build_table(data):
     
     with col2:
         st.download_button(
-            label="📊 Download as CSV",
+            label="Download as CSV",
             data=csv_data,
             file_name=f"{results['trace_title']}_results.csv",
             mime="text/csv"

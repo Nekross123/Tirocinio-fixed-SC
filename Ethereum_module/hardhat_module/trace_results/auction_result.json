@@ -1,0 +1,36 @@
+{
+  "network": "localhost",
+  "success": true,
+  "platform": "Ethereum",
+  "trace_title": "auction_results",
+  "results": [
+    {
+      "step": 1,
+      "function_name": "start",
+      "transaction_hash": "0xc286746b5bc8cf9ba21025f469441e250f179fe1545418ec95444e3b7df8069c",
+      "gas_used": 21204,
+      "size_in_bytes": 140
+    },
+    {
+      "step": 2,
+      "function_name": "bid",
+      "transaction_hash": "0xc0f4f25653fb9453863621dfec03ba7c9b121c1e8edc9fd5d672260565a02997",
+      "gas_used": 21064,
+      "size_in_bytes": 116
+    },
+    {
+      "step": 3,
+      "function_name": "withdraw",
+      "transaction_hash": "0xe126417206bf8c6d695a6f0542c19ed4484115e2bc45d0c67f73776c9cb8ba5c",
+      "gas_used": 21064,
+      "size_in_bytes": 108
+    },
+    {
+      "step": 4,
+      "function_name": "end",
+      "transaction_hash": "0x0ae2fe3d1bbf8f8cb5d0f7e34b99fe12fe672d59ee55f3f454f4fca4487777a3",
+      "gas_used": 21064,
+      "size_in_bytes": 108
+    }
+  ]
+}

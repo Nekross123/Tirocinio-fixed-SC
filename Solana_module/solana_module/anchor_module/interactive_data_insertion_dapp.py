@@ -262,7 +262,7 @@ def save_transaction_result(program: str,
     file_name = f"{program}_results.json"
     file_path = os.path.join(results_folder, file_name)
     
-    network_formatted = f"{cluster.lower()}*"
+    network_formatted = f"{cluster.lower()}"
     
     result_data = {
         "network": network_formatted,

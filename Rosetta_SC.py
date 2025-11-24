@@ -15,9 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
 # Import moduli Solana
 # ==============================
 
-import Solana_module.solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
-from  Solana_module.solana_module.solana_utils import load_keypair_from_file, create_client
-import  Solana_module.solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
+
 
 
 TRACES_PATH = os.path.join( "Solana_module","solana_module", "anchor_module", "execution_traces")

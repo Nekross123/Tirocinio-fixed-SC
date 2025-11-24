@@ -226,7 +226,7 @@ def _extract_program_id(lib_path):
 # CARGO.TOML E DIPENDENZE
 # =====================================================
 def _detect_dependencies_from_code(program_code: str):
-    """Heuristically identify Rust deps (pyth, switchboard, spl, mpl, etc.)."""
+    """Heuristically identify Rust deps (pyth, switchboard, spl, mpl, sha3, etc.)."""
     deps = {}
     if 'pyth_sdk_solana' in program_code or 'pyth_sdk_solana::' in program_code:
         deps['pyth-sdk-solana'] = '0.10'
@@ -238,6 +238,8 @@ def _detect_dependencies_from_code(program_code: str):
         deps['spl-associated-token-account'] = '4.0'
     if 'mpl_token_metadata' in program_code or 'mpl_token_metadata::' in program_code:
         deps['mpl-token-metadata'] = '4.1'
+    if 'sha3::' in program_code or 'Keccak256' in program_code or 'use sha3' in program_code:
+        deps['sha3'] = '0.10'
     return deps
 
 def _check_for_anchor_spl_usage(program_code: str):

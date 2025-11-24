@@ -4,7 +4,7 @@
 import os
 import json
 from typing import Dict, List, Any, Optional
-from ethereum_module.hardhat_module.contract_utils import (
+from Ethereum_module.hardhat_module.contract_utils import (
     fetch_deployed_contracts,
     load_abi_for_contract, 
     fetch_functions_for_contract,
@@ -23,7 +23,7 @@ def get_available_contracts() -> List[str]:
 
 def get_available_wallets() -> List[str]:
     """Get list of available wallet files."""
-    wallets_path = os.path.join("ethereum_module", "ethereum_wallets")
+    wallets_path = os.path.join("Ethereum_module","ethereum_wallets")
     if not os.path.exists(wallets_path):
         return []
     return [f for f in os.listdir(wallets_path) if f.endswith('.json')]

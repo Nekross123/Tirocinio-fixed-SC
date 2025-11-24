@@ -20,7 +20,7 @@ import json
 # OS library for file system operations
 import os
 # Import the base path configuration for the ethereum module
-from ethereum_module.ethereum_utils import ethereum_base_path
+from Ethereum_module.ethereum_utils import ethereum_base_path
 
 def create_account():
 

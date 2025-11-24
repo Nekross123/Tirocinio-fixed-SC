@@ -10,10 +10,8 @@
       "use": "True"
     },
     "evm": {
-      "use": "True"
     },
     "tezos": {
-      "use": "True"
     },
     "cardano": {}
   },

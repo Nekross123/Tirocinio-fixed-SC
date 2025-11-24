@@ -20,7 +20,7 @@ except Exception as e:
     print(f"⚠️  Could not load .env file: {e}")
 
 # Base path now points to this package at repo root
-ethereum_base_path = os.path.join("ethereum_module")
+ethereum_base_path = os.path.join("Ethereum_module")
 hardhat_base_path = f"{ethereum_base_path}/hardhat_module"
 # Global default network - can be changed by set_default_network()
 DEFAULT_NETWORK = "localhost"
@@ -55,7 +55,7 @@ def bind_actors(trace_name ):
 
     association = dict()
     trace_actors  = data["trace_actors"]
-    wallets_path = 'ethereum_module/ethereum_wallets'
+    wallets_path = 'Ethereum_module/ethereum_wallets'
     
     # Filter only .json wallet files
     all_files = os.listdir(wallets_path)

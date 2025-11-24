@@ -1,9 +1,9 @@
 {
   "contract_name": "auction",
-  "address": "0x17e91224c30c5b0B13ba2ef1E84FE880Cb902352",
-  "transaction_hash": "0x12faf1dd61bfb1e2d48c30632fe00f9ec09ff0e65b03cbc7124830e3d8045162",
+  "address": "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+  "transaction_hash": "0xc61abccc17014ea6ad8762e1e000b5e821011850d91792de15c96a8f8075f2db",
   "network": "localhost",
-  "deployed_at": 1762420935.0244043,
+  "deployed_at": 1762532931.1882944,
   "size_in_bytes": 6290,
   "abi": [
     {

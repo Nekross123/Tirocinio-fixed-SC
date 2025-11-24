@@ -1,7 +1,9 @@
 import json
 import os
 import streamlit as st
-from ethereum_module.hardhat_module.contract_utils import (
+import time
+
+from Ethereum_module.hardhat_module.contract_utils import (
     get_deployment_info,
     load_wallet_from_file,
     create_web3_instance,
@@ -9,13 +11,13 @@ from ethereum_module.hardhat_module.contract_utils import (
     fetch_contract_context,
     get_default_network
 )
-from ethereum_module.hardhat_module.meta_transaction import metaTransaction
-from ethereum_module.hardhat_module.compiler_and_deployer import automatic_compile_and_deploy_contracts
-from ethereum_module.ethereum_utils import ethereum_base_path, hardhat_base_path ,read_json , \
+from Ethereum_module.hardhat_module.meta_transaction import metaTransaction
+from Ethereum_module.hardhat_module.compiler_and_deployer import automatic_compile_and_deploy_contracts
+from Ethereum_module.ethereum_utils import ethereum_base_path, hardhat_base_path ,read_json , \
 bind_actors , build_complete_dict , set_guidance_parameters
-from ethereum_module.interactive_interface import get_function_guidance
+from Ethereum_module.interactive_interface import get_function_guidance
 
-from ethereum_module.streamlit_constructor_interface import automatic_constructor_collector
+from Ethereum_module.streamlit_constructor_interface import automatic_constructor_collector
 from eth_account import Account
 import traceback
 
@@ -48,7 +50,7 @@ def exec_contract_automatically(contract_deployment_id):
     json_file = read_json(f"{traces_path}/{contract_file}")
     
     if json_file is None:
-        st.error(f"❌ Failed to read trace file: {contract_file}")
+        st.error(f" Failed to read trace file: {contract_file}")
         return
 
     
@@ -58,7 +60,7 @@ def exec_contract_automatically(contract_deployment_id):
     contract_name = json_file.get("trace_title", "") + ".sol"
     actors_dict = bind_actors(contract_deployment_id)
     if not actors_dict:
-        st.error("❌ Failed to bind actors to wallets")
+        st.error(" Failed to bind actors to wallets")
         return {
             "success": False,
             "error": "Failed to bind actors to wallets",
@@ -89,10 +91,10 @@ def exec_contract_automatically(contract_deployment_id):
             automatic_compile_and_deploy_contracts(sender_wallet, network, True, contract_name, constr_dict , value_in_ether)
 
         else:
-            st.info("ℹ️ No deployment configuration found, skipping deployment step.")
+            st.info("ℹ No deployment configuration found, skipping deployment step.")
 
     except Exception as e:
-        st.info(f"❌ Error automatically deploing the contract: {str(e)}")
+        st.info(f" Error automatically deploing the contract: {str(e)}")
 
     try:
         # Get deployment info (common for all functions)
@@ -115,8 +117,20 @@ def exec_contract_automatically(contract_deployment_id):
         # Execute each function in the trace
         for i, execution_step in enumerate(trace_executions):
             if execution_step.get("ethereum"):
-                st.info(f"🔄 Executing step {i+1}/{len(trace_executions)}: {execution_step['function_name']}")
+                st.info(f" Executing step {i+1}/{len(trace_executions)}: {execution_step['function_name']}")
+                if execution_step.get("waiting_time", 0) > 0:
+                    wait_time = execution_step.get("waiting_time", 0)
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
 
+                    for j in range(wait_time):
+                        progress = (j + 1) / wait_time
+                        progress_bar.progress(progress)
+                        status_text.info(f"Waiting... {wait_time - j}s remaining")
+                        time.sleep(1)
+
+                    progress_bar.empty()
+                    status_text.empty()
                 try:
                     # Get function name and parameters
                     function_name = execution_step["function_name"]
@@ -159,7 +173,7 @@ def exec_contract_automatically(contract_deployment_id):
 
 
                     # Load wallet for this step
-                    wallet_path = os.path.join("ethereum_module", "ethereum_wallets", actual_wallet_file)
+                    wallet_path = os.path.join("Ethereum_module", "ethereum_wallets", actual_wallet_file)
                     wallet_data = load_wallet_from_file(wallet_path)
                     if not wallet_data:
                         st.error(f"❌ Could not load wallet: {actual_wallet_file}")
@@ -290,7 +304,7 @@ def exec_contract_automatically(contract_deployment_id):
                 json_data = f.read()
             
             st.download_button(
-                label="📥 Download Results JSON",
+                label=" Download Results JSON",
                 data=json_data,
                 file_name=result_filename,
                 mime="application/json",
@@ -298,7 +312,7 @@ def exec_contract_automatically(contract_deployment_id):
             )
             
         except Exception as e:
-            st.warning(f"⚠️ Could not save results file: {str(e)}")
+            st.warning(f" Could not save results file: {str(e)}")
         
         return final_results
                 
@@ -311,7 +325,7 @@ def exec_contract_automatically(contract_deployment_id):
             "error": f"Global execution failed: {str(e)}",
             "results": all_results  # Return any partial results
         }
-        st.error(f"❌ Execution failed: {str(e)}")
+        st.error(f" Execution failed: {str(e)}")
         st.error(traceback.format_exc())
         # Save error results to JSON file
         result_filename = f"{contract_deployment_id}_result.json"
@@ -323,14 +337,14 @@ def exec_contract_automatically(contract_deployment_id):
             with open(result_filepath, 'r', encoding='utf-8') as f:
                 json_data = f.read()
             st.download_button(
-                label="📥 Download Partial Results JSON",
+                label=" Download Partial Results JSON",
                 data=json_data,
                 file_name=result_filename,
                 mime="application/json",
                 help=f"Download the partial execution results as {result_filename}"
             )
         except Exception as save_error:
-            st.warning(f"⚠️ Could not save error results file: {str(save_error)}")
+            st.warning(f" Could not save error results file: {str(save_error)}")
         return error_results
 
 def find_execution_traces():
