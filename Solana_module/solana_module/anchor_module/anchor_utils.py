@@ -6,6 +6,7 @@ import re
 import toml
 import importlib
 import importlib.util
+import shutil
 from based58 import b58encode
 from solders.pubkey import Pubkey
 from Solana_module.solana_module.solana_utils import solana_base_path, choose_wallet, load_keypair_from_file, selection_menu
@@ -14,6 +15,15 @@ from solana.rpc.async_api import AsyncClient
 
 anchor_base_path = os.path.dirname(os.path.abspath(__file__))
 
+def delete_rust_contract(file_path):
+    
+    if os.path.exists(file_path):
+        st.warning(f"The current compiled file will be overwritten: {file_path}")
+        shutil.rmtree(file_path)
+        print(f"File '{file_path}' deleted succesfuly.")
+    else:
+        st.info("Procedo con la compilazione normale.")
+        print("File not found.")
 
 
 def fetch_initialized_programs():

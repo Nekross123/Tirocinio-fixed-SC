@@ -1,6 +1,8 @@
 ﻿# Ambiente virtuale Python
 venv/
 env/
+.venv/
+.envrc
 */ambientevirtuale*/
 ambientevirtualeRosetta/
 *.pyc
@@ -8,6 +10,7 @@ __pycache__/
 .ipynb_checkpoints/
 .pytest_cache/
 .mypy_cache/
+
 
 # File di sistema
 .DS_Store

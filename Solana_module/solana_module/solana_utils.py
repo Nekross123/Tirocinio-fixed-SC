@@ -4,6 +4,7 @@ from solders.keypair import Keypair
 from solana.rpc.async_api import AsyncClient
 import subprocess
 import platform
+import streamlit as st
 
 
 # Percorso base del progetto, utile per tutti i path relativi ad Anchor
@@ -11,6 +12,10 @@ anchor_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 solana_base_path = os.path.dirname(os.path.abspath(__file__))
 WALLETS_PATH = os.path.join(solana_base_path, "solana_wallets")
+
+
+
+
 
 
 def load_keypair_from_file(file_path):

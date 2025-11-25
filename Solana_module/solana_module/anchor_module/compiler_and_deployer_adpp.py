@@ -6,7 +6,7 @@ import sys
 import subprocess
 import platform
 from Solana_module.solana_module.solana_utils import run_command, choose_wallet, choose_cluster
-from Solana_module.solana_module.anchor_module.anchor_utils import load_idl
+from Solana_module.solana_module.anchor_module.anchor_utils import load_idl,delete_rust_contract
 
 anchor_base_path = os.path.join("Solana_module", "solana_module", "anchor_module")
 
@@ -27,6 +27,9 @@ def compile_and_deploy_programs(wallet_name=None, cluster="Devnet", deploy=False
     Returns a JSON-friendly dict per program with compile/deploy results, IDs,
     and any errors. Supports selecting a single program by filename.
     """
+    deployed_name = single_program.strip(".rs") 
+    deployed_path = os.path.join(anchor_base_path, ".anchor_files",deployed_name)
+    delete_rust_contract(deployed_path)
 
     results = []
     operating_system = platform.system()

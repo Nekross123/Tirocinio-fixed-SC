@@ -1,0 +1,125 @@
+{
+  "trace_title": "simple_transfer",
+  "trace_actors": [
+    "recipient",
+    "sender"
+  ],
+  "configuration": {
+    "solana": {
+      "use": "True"
+    },
+    "cardano": {
+      "use": "True"
+    },
+    "evm": {
+      "use": "True"
+    },
+    "tezos": {}
+  },
+  "trace_execution": [
+    {
+      "sequence_id": 1,
+      "function_name": "deposit",
+      "waiting_time": 0,
+      "actors": [
+        "recipient",
+        "sender"
+      ],
+      "args": {
+        "amount_to_deposit": 100000
+      },
+      "solana": {
+        "balance_holder_pda": {
+          "opt": "s",
+          "param": [
+            "recipient",
+            "sender"
+          ]
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      },
+      "evm": {
+        "contract_name": "SimpleTransfer",
+        "method": "deposit",
+        "value": 0,
+        "gas_limit": 200000,
+        "args": {
+          "amount": 100000
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      },
+      "tezos": {},
+      "cardano": {
+        "datum": {
+          "constructor": 0,
+          "fields": [
+            { "bytes": "616c696365" },
+            { "bytes": "626f62" },
+            { "int": 0 }
+          ]
+        },
+        "redeemer": {
+          "constructor": 0,
+          "fields": [
+            { "int": 100000 }
+          ]
+        },
+        "witness_count": 2
+      }
+    },
+    {
+      "sequence_id": 2,
+      "function_name": "deposit",
+      "waiting_time": 0,
+      "actors": [
+        "recipient",
+        "sender"
+      ],
+      "args": {
+        "amount_to_deposit": 500000
+      },
+      "solana": {
+        "balance_holder_pda": {
+          "opt": "s",
+          "param": [
+            "recipient",
+            "sender"
+          ]
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      },
+      "evm": {
+        "contract_name": "SimpleTransfer",
+        "method": "deposit",
+        "value": 0,
+        "gas_limit": 200000,
+        "args": {
+          "amount": 500000
+        },
+        "provider_wallet": "sender",
+        "send_transaction": true
+      },
+      "tezos": {},
+      "cardano": {
+        "datum": {
+          "constructor": 0,
+          "fields": [
+            { "bytes": "616c696365" },
+            { "bytes": "626f62" },
+            { "int": 100000 }
+          ]
+        },
+        "redeemer": {
+          "constructor": 0,
+          "fields": [
+            { "int": 500000 }
+          ]
+        },
+        "witness_count": 2
+      }
+    }
+  ]
+}

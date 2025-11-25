@@ -18,10 +18,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Solana_module"))
 
 
 
-TRACES_PATH = os.path.join( "Solana_module","solana_module", "anchor_module", "execution_traces")
-
-
-
+TRACES_PATH = os.path.join("Solana_module", "solana_module", "anchor_module", "execution_traces")
 
 
 # ==============================

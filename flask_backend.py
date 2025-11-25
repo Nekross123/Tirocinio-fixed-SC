@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Tezos_module"))
 # Solana imports
 import solana_module.anchor_module.dapp_automatic_insertion_manager as trace_manager
 from solana_module.anchor_module.anchor_utilities import close_anchor_program_dapp
-from solana_module.solana_utils import load_keypair_from_file, create_client , get_wallet_balance, get_wallet_pubkey
+from solana_module.solana_utils import load_keypair_from_file, create_client , get_wallet_balance, get_wallet_pubkey 
 import solana_module.anchor_module.compiler_and_deployer_adpp as toolchain
 from solana_module.anchor_module.interactive_data_insertion_dapp import (
     fetch_programs,
@@ -58,6 +58,21 @@ except ImportError as e:
     print(f"Tezos modules not available: {e}")
     TEZOS_ENABLED = False
 
+# Cardano imports
+try:
+    from tezos_module.tezos_interface import (
+        compile_and_deploy_tezos_contracts,
+        fetch_tezos_contracts,
+        fetch_tezos_entrypoints,
+        fetch_tezos_contract_context,
+        interact_with_tezos_contract,
+        is_tezos_available
+    )
+    CARDANO_ENABLED = True
+except ImportError as e:
+    print(f"Cardano modules not available: {e}")
+    CARDANO_ENABLED = False
+
 app = Flask(__name__)
 
 # ==============================
@@ -89,7 +104,7 @@ def compile_deploy():
     wallet_file = request.json.get("wallet_file")
     deploy_flag = request.json.get("deploy", True)
     selected_cluster = request.json.get("cluster", "Devnet")
-    single_program = request.json.get("single_program", None)  # Nome del singolo programma
+    single_program = request.json.get("single_program", None)  
     
     try:
         result = toolchain.compile_and_deploy_programs(
@@ -624,6 +639,11 @@ def tezos_interact_contract():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": f"Internal error: {str(e)}"}), 500
+
+# ==============================
+# CARDANO ROUTES
+# ==============================
+
 
 
 if __name__ == "__main__":
